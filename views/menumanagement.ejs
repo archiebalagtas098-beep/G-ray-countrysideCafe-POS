@@ -113,12 +113,6 @@
                                     </div>
                                 </div>
                             </li>
-                            <li class="nav-item">
-                                <a href="#" class="nav-link" data-section="sendstock">
-                                    <span class="nav-icon">Send Stocks</span>
-                                    <span id="pendingStockBadge" style="display: none; position: absolute; right: 10px; background: #FF6B6B; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; font-weight: bold; align-items: center; justify-content: center; min-width: 24px;">0</span>
-                                </a>
-                            </li>
                         </ul>
                     </div>
                 </aside>
@@ -190,80 +184,6 @@
                                 <h3>No Products Available</h3>
                                 <p>Get started by adding your first menu item</p>
                                 <button class="btn btn-primary" id="addFirstMenuBtn" type="button" title="Add first menu product">Add New Product</button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="section-content" id="sendstock">
-                        <div class="content-header">
-                            <div class="content-title">
-                                <h2>Send Stocks</h2>
-                            </div>
-                        </div>
-
-                        <div class="sendstock-container">
-                            <!-- PENDING STOCK REQUESTS SECTION -->
-                            <div id="pendingRequestsSection" style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #FF9800; display: none;">
-                                <h3 style="margin-top: 0; color: #333; display: flex; align-items: center; gap: 10px;">
-                                    <i class="fas fa-bell" style="color: #FF9800;"></i>
-                                    Pending Staff Stock Requests
-                                    <span id="requestCount" style="background: #FF9800; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: auto;">0</span>
-                                </h3>
-                                <div id="pendingRequestsList" style="max-height: 300px; overflow-y: auto;">
-                                    <!-- Pending requests will be populated here -->
-                                </div>
-                            </div>
-
-                            <div class="header-controls">
-                                <div class="search-box">
-                                    <i class="fas fa-search"></i>
-                                    <input type="text" id="searchInput" placeholder="Search stocks by name, category, or description...">
-                                </div>
-                            </div>
-                            
-                            <div class="filter-buttons">
-                                <button class="filter-btn active" onclick="filterTable('all')">All Stocks</button>
-                                <button class="filter-btn" onclick="filterTable('Rice Bowl Meals')">Rice Bowl Meals</button>
-                                <button class="filter-btn" onclick="filterTable('Hot Sizzlers')">Hot Sizzlers</button>
-                                <button class="filter-btn" onclick="filterTable('Party Tray')">Party Tray</button>
-                                <button class="filter-btn" onclick="filterTable('Drinks')">Drinks</button>
-                                <button class="filter-btn" onclick="filterTable('Coffee')">Coffee</button>
-                                <button class="filter-btn" onclick="filterTable('Milk Tea')">Milk Tea</button>
-                                <button class="filter-btn" onclick="filterTable('Frappe')">Frappe</button>
-                                <button class="filter-btn" onclick="filterTable('Snacks & Appetizer')">Snacks & Appetizer</button>
-                                <button class="filter-btn" onclick="filterTable('Budget Meals Served with Rice')">Budget Meals</button>
-                                <button class="filter-btn" onclick="filterTable('Specialties')">Specialties</button>
-                            </div>
-                            
-                            <div class="table-responsive">
-                                <table id="stocksTable">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Name</th>
-                                            <th>Category</th>
-                                            <th>Description</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
-                                            <th>Status</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tableBody">
-                                        <!-- Data will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <!-- PAGINATION CONTAINER -->
-                            <div id="paginationContainer" class="pagination-container"></div>
-                            
-                            <div class="table-footer">
-                                <div class="total-items">Total Items: <span id="totalItems">0</span></div>
-                                <div>Last Updated: <span id="lastUpdated">Just now</span></div>
-                                <button onclick="resetAllQuantities()" class="reset-btn" style="margin-left: auto;">
-                                    <i class="fas fa-redo"></i> Reset All Quantities
-                                </button>
                             </div>
                         </div>
                     </section>

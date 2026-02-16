@@ -8,40 +8,23 @@ let currentSection = 'dashboard';
 let currentCategory = 'all';
 let isModalOpen = false;
 let retryCount = 0;
-let currentInventoryCache = []; // Cache for current inventory items
-let lastInventoryCacheTime = 0; // Timestamp of last inventory fetch
-
-// Send Stock Global Variables
-let stocksData = [];
-let changes = new Map();
-let sendStockUIInitialized = false; // Flag to prevent re-rendering flicker
-let lastQuantityValues = new Map(); // Store quantity values before re-render
-let staffInventoryCache = []; // Cache for staff inventory
-let lastStaffInventoryFetch = 0; // Timestamp of last staff inventory fetch
+let currentInventoryCache = [];
+let lastInventoryCacheTime = 0;
 
 // PAGINATION VARIABLES
 let currentPage = 1;
 let itemsPerPage = 15;
 let totalPages = 1;
-let filteredStocksData = [];
+let filteredMenuItems = [];
 
 // NOTIFICATION EVENT SOURCE
 let notificationEventSource = null;
 
-// WEBSOCKET CONNECTION
-let adminWebSocket = null;
-
-// ✅ STOCK REQUEST MODAL VARIABLES
-let pendingStockRequests = [];
-let stockRequestTimestamps = {};
-let activeStockRequestModals = new Set();
-
 const MAX_RETRIES = 3;
 const BACKEND_URL = 'http://localhost:5050';
 const INVENTORY_CACHE_DURATION = 5000;
-const MAX_STOCK_PER_ITEM = 100;
 
-// ==================== 🥩 REAL INGREDIENT INVENTORY ====================
+// ==================== INGREDIENT INVENTORY ====================
 const ingredientInventory = {
     'pork': { name: 'Pork', current: 100, max: 500, unit: 'kg', minThreshold: 20 },
     'chicken': { name: 'Chicken', current: 100, max: 300, unit: 'kg', minThreshold: 15 },
@@ -95,7 +78,7 @@ const ingredientInventory = {
     'water': { name: 'Water', current: 100, max: 200, unit: 'liter', minThreshold: 30 }
 };
 
-// ==================== 🍽️ SERVINGWARE INVENTORY ====================
+// ==================== SERVINGWARE INVENTORY ====================
 const servingwareInventory = {
     'plate': { name: 'Plate', current: 100, max: 100, unit: 'piece', minThreshold: 20 },
     'tray': { name: 'Party Tray', current: 100, max: 100, unit: 'piece', minThreshold: 15 },
@@ -111,9 +94,8 @@ const servingwareInventory = {
     'pot': { name: 'Cooking Pot', current: 30, max: 30, unit: 'piece', minThreshold: 5 }
 };
 
-// ==================== 🍽️ PRODUCT INGREDIENT MAPPING ====================
+// ==================== PRODUCT INGREDIENT MAPPING ====================
 const productIngredientMap = {
-    // ==================== RICE MEALS ====================
     'Korean Spicy Bulgogi (Pork)': {
         ingredients: { 'pork': 0.25, 'gochujang': 0.03, 'soy_sauce': 0.03, 'garlic': 0.02, 'onion': 0.05, 'sugar': 0.01, 'sesame_oil': 0.02, 'chili_flakes': 0.005, 'black_pepper': 0.005 },
         servingware: 'plate'
@@ -146,8 +128,6 @@ const productIngredientMap = {
         ingredients: { 'ground_pork': 0.2, 'carrot': 0.03, 'onion': 0.03, 'garlic': 0.02, 'egg': 1, 'breadcrumbs': 0.03, 'lumpia_wrapper': 10, 'cooking_oil': 0.1 },
         servingware: 'plate'
     },
-
-    // ==================== SIZZLING ====================
     'Sizzling Pork Sisig': {
         ingredients: { 'pork': 0.3, 'onion': 0.08, 'chili': 0.02, 'calamansi': 0.03, 'mayonnaise': 0.05, 'soy_sauce': 0.02, 'egg': 1, 'cooking_oil': 0.1 },
         servingware: 'sizzling plate'
@@ -164,8 +144,6 @@ const productIngredientMap = {
         ingredients: { 'fried_chicken': 0.35, 'flour': 0.03, 'garlic': 0.02, 'black_pepper': 0.01, 'gravy': 0.2, 'cooking_oil': 0.1 },
         servingware: 'sizzling plate'
     },
-
-    // ==================== PARTY TRAYS ====================
     'Pancit Bihon': {
         ingredients: { 'rice_noodles': 0.5, 'chicken': 0.1, 'cabbage': 0.15, 'carrot': 0.1, 'garlic': 0.03, 'onion': 0.05, 'soy_sauce': 0.05, 'oyster_sauce': 0.02, 'cooking_oil': 0.05 },
         servingware: 'tray'
@@ -178,8 +156,6 @@ const productIngredientMap = {
         ingredients: { 'spaghetti_pasta': 0.5, 'sweet_tomato_sauce': 0.2, 'ground_meat': 0.15, 'hotdog': 0.1, 'cheese': 0.08, 'garlic': 0.02, 'onion': 0.03, 'cooking_oil': 0.05 },
         servingware: 'tray'
     },
-
-    // ==================== DRINKS ====================
     'Cucumber Lemonade': {
         ingredients: { 'cucumber': 0.1, 'lemon': 0.1, 'sugar': 0.05, 'water': 0.3, 'ice': 0.1 },
         servingware: 'glass'
@@ -196,8 +172,6 @@ const productIngredientMap = {
         ingredients: { 'carbonated_soft_drink': 1 },
         servingware: 'bottle'
     },
-
-    // ==================== COFFEE ====================
     'Cafe Americano': {
         ingredients: { 'espresso': 0.03, 'hot_water': 0.2 },
         servingware: 'cup'
@@ -210,8 +184,6 @@ const productIngredientMap = {
         ingredients: { 'espresso': 0.03, 'milk': 0.2, 'caramel_syrup': 0.03, 'vanilla_syrup': 0.01 },
         servingware: 'cup'
     },
-
-    // ==================== MILK TEA / FRAPPE ====================
     'Milk Tea': {
         ingredients: { 'black_tea': 0.02, 'milk': 0.2, 'sugar': 0.05, 'tapioca_pearls': 0.03 },
         servingware: 'cup'
@@ -232,8 +204,6 @@ const productIngredientMap = {
         ingredients: { 'mango_flavor': 0.05, 'cream_cheese_flavor': 0.03, 'milk': 0.2, 'ice': 0.2 },
         servingware: 'cup'
     },
-
-    // ==================== SNACKS ====================
     'Cheesy Nachos': {
         ingredients: { 'nacho_chips': 0.3, 'cheese_sauce': 0.15 },
         servingware: 'serving'
@@ -262,8 +232,6 @@ const productIngredientMap = {
         ingredients: { 'ground_pork': 0.15, 'vegetables': 0.1, 'lumpia_wrapper': 15, 'cooking_oil': 0.15 },
         servingware: 'plate'
     },
-
-    // ==================== BUDGET MEALS ====================
     'Fried Chicken': {
         ingredients: { 'chicken': 0.25, 'flour': 0.05, 'garlic': 0.02, 'black_pepper': 0.005, 'cooking_oil': 0.2, 'salt': 0.01 },
         servingware: 'plate'
@@ -284,8 +252,6 @@ const productIngredientMap = {
         ingredients: { 'rice': 0.25, 'water': 0.5 },
         servingware: 'bowl'
     },
-
-    // ==================== SPECIALTIES ====================
     'Sinigang (Pork)': {
         ingredients: { 'pork': 0.4, 'tamarind_mix': 0.05, 'tomato': 0.05, 'onion': 0.05, 'radish': 0.1, 'kangkong': 0.1 },
         servingware: 'pot'
@@ -306,8 +272,6 @@ const productIngredientMap = {
         ingredients: { 'beef_shank': 0.8, 'corn': 0.1, 'cabbage': 0.3, 'potato': 0.2, 'onion': 0.1, 'peppercorn': 0.01 },
         servingware: 'pot'
     },
-
-    // ==================== PACKAGING (No Ingredients) ====================
     'Paper Cups (12oz)': {
         ingredients: {},
         servingware: 'pack'
@@ -346,11 +310,11 @@ const productIngredientMap = {
     }
 };
 
-// ==================== FALLBACK DATA - USE THIS WHEN BACKEND IS DOWN ====================
+// ==================== FALLBACK MENU ITEMS ====================
 const FALLBACK_MENU_ITEMS = [
     { _id: 'fallback_1', name: 'Korean Spicy Bulgogi (Pork)', category: 'Rice', unit: 'plate', price: 180, currentStock: 0, minStock: 10, maxStock: 200 },
     { _id: 'fallback_2', name: 'Korean Salt and Pepper (Pork)', category: 'Rice', unit: 'plate', price: 175, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_3', name: 'Crisky Pork Lechon Kawali', category: 'Rice', unit: 'plate', price: 165, currentStock: 0, minStock: 10, maxStock: 200 },
+    { _id: 'fallback_3', name: 'Crispy Pork Lechon Kawali', category: 'Rice', unit: 'plate', price: 165, currentStock: 0, minStock: 10, maxStock: 200 },
     { _id: 'fallback_4', name: 'Cream Dory Fish Fillet', category: 'Rice', unit: 'plate', price: 160, currentStock: 0, minStock: 10, maxStock: 200 },
     { _id: 'fallback_5', name: 'Buttered Honey Chicken', category: 'Rice', unit: 'plate', price: 155, currentStock: 0, minStock: 10, maxStock: 200 },
     { _id: 'fallback_6', name: 'Buttered Spicy Chicken', category: 'Rice', unit: 'plate', price: 155, currentStock: 0, minStock: 10, maxStock: 200 },
@@ -417,9 +381,8 @@ const FALLBACK_MENU_ITEMS = [
     { _id: 'fallback_67', name: 'Napkins (Pack of 50)', category: 'packaging', unit: 'pack', price: 75, currentStock: 0, minStock: 10, maxStock: 200 }
 ];
 
-// ==================== FALLBACK INVENTORY DATA ====================
+// ==================== FALLBACK INVENTORY ITEMS ====================
 const FALLBACK_INVENTORY_ITEMS = [
-    // ==================== MEAT & POULTRY ====================
     { _id: 'inv_1', itemName: 'Pork', currentStock: 100, unit: 'kg', category: 'meat' },
     { _id: 'inv_2', itemName: 'Pork belly', currentStock: 100, unit: 'kg', category: 'meat' },
     { _id: 'inv_3', itemName: 'Pork chop', currentStock: 100, unit: 'kg', category: 'meat' },
@@ -435,8 +398,6 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_13', itemName: 'Ham', currentStock: 100, unit: 'kg', category: 'meat' },
     { _id: 'inv_14', itemName: 'Hotdog', currentStock: 100, unit: 'kg', category: 'meat' },
     { _id: 'inv_15', itemName: 'Fish', currentStock: 100, unit: 'kg', category: 'seafood' },
-    
-    // ==================== FRESH PRODUCE ====================
     { _id: 'inv_16', itemName: 'Garlic', currentStock: 100, unit: 'kg', category: 'produce' },
     { _id: 'inv_17', itemName: 'Onion', currentStock: 100, unit: 'kg', category: 'produce' },
     { _id: 'inv_18', itemName: 'Carrot', currentStock: 100, unit: 'kg', category: 'produce' },
@@ -457,16 +418,12 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_33', itemName: 'Corn', currentStock: 100, unit: 'kg', category: 'produce' },
     { _id: 'inv_34', itemName: 'Potato', currentStock: 100, unit: 'kg', category: 'produce' },
     { _id: 'inv_35', itemName: 'Bread', currentStock: 100, unit: 'loaf', category: 'produce' },
-    
-    // ==================== DAIRY & EGGS ====================
     { _id: 'inv_36', itemName: 'Butter', currentStock: 100, unit: 'kg', category: 'dairy' },
     { _id: 'inv_37', itemName: 'Egg', currentStock: 100, unit: 'piece', category: 'dairy' },
     { _id: 'inv_38', itemName: 'Milk', currentStock: 100, unit: 'liter', category: 'dairy' },
     { _id: 'inv_39', itemName: 'Cheese', currentStock: 100, unit: 'kg', category: 'dairy' },
     { _id: 'inv_40', itemName: 'Cream', currentStock: 100, unit: 'liter', category: 'dairy' },
     { _id: 'inv_41', itemName: 'Mayonnaise', currentStock: 100, unit: 'kg', category: 'dairy' },
-    
-    // ==================== PANTRY STAPLES ====================
     { _id: 'inv_42', itemName: 'Soy sauce', currentStock: 100, unit: 'liter', category: 'dry' },
     { _id: 'inv_43', itemName: 'Vinegar', currentStock: 100, unit: 'liter', category: 'dry' },
     { _id: 'inv_44', itemName: 'Salt', currentStock: 100, unit: 'kg', category: 'dry' },
@@ -494,18 +451,12 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_66', itemName: 'Ground meat', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_67', itemName: 'Water', currentStock: 100, unit: 'liter', category: 'dry' },
     { _id: 'inv_68', itemName: 'Ice', currentStock: 100, unit: 'kg', category: 'dry' },
-    
-    // ==================== NOODLES & PASTA ====================
     { _id: 'inv_69', itemName: 'Pancit canton', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_70', itemName: 'Rice noodles', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_71', itemName: 'Spaghetti pasta', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_72', itemName: 'Pasta', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_73', itemName: 'Pancit bihon', currentStock: 100, unit: 'kg', category: 'dry' },
-    
-    // ==================== RICE & GRAINS ====================
     { _id: 'inv_74', itemName: 'Rice', currentStock: 100, unit: 'kg', category: 'dry' },
-    
-    // ==================== BEVERAGES ====================
     { _id: 'inv_75', itemName: 'Lemon juice', currentStock: 100, unit: 'liter', category: 'beverage' },
     { _id: 'inv_76', itemName: 'Blue syrup', currentStock: 100, unit: 'liter', category: 'beverage' },
     { _id: 'inv_77', itemName: 'Tea', currentStock: 100, unit: 'kg', category: 'beverage' },
@@ -516,8 +467,6 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_82', itemName: 'Carbonated soft drink', currentStock: 100, unit: 'liter', category: 'beverage' },
     { _id: 'inv_83', itemName: 'Chicken broth', currentStock: 100, unit: 'liter', category: 'beverage' },
     { _id: 'inv_84', itemName: 'Milk tea base', currentStock: 100, unit: 'liter', category: 'beverage' },
-    
-    // ==================== COFFEE & TEA INGREDIENTS ====================
     { _id: 'inv_85', itemName: 'Coffee beans', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_86', itemName: 'Matcha powder', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_87', itemName: 'Caramel syrup', currentStock: 100, unit: 'liter', category: 'dry' },
@@ -527,13 +476,9 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_91', itemName: 'Cream cheese flavor', currentStock: 100, unit: 'liter', category: 'dry' },
     { _id: 'inv_92', itemName: 'Tapioca pearls', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_93', itemName: 'Cookie crumbs', currentStock: 100, unit: 'kg', category: 'dry' },
-    
-    // ==================== SNACKS & SIDES ====================
     { _id: 'inv_94', itemName: 'Nacho chips', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_95', itemName: 'Lumpia wrapper', currentStock: 100, unit: 'kg', category: 'dry' },
     { _id: 'inv_96', itemName: 'French fries', currentStock: 100, unit: 'kg', category: 'dry' },
-    
-    // ==================== PACKAGING ====================
     { _id: 'inv_97', itemName: 'Paper cups', currentStock: 100, unit: 'pack', category: 'packaging' },
     { _id: 'inv_98', itemName: 'Straws', currentStock: 100, unit: 'pack', category: 'packaging' },
     { _id: 'inv_99', itemName: 'Napkins', currentStock: 100, unit: 'pack', category: 'packaging' },
@@ -541,29 +486,15 @@ const FALLBACK_INVENTORY_ITEMS = [
     { _id: 'inv_101', itemName: 'Plastic utensils', currentStock: 100, unit: 'pack', category: 'packaging' }
 ];
 
-// ✅ FIX: Prevent inventory from resetting to 100 - load persisted values
+// ==================== LOAD INVENTORY WITH PERSISTED VALUES ====================
 function loadInventoryWithPersistedValues() {
     console.log('🔄 Loading persisted inventory values...');
     
-    // Try to load from InventoryManager first (new system)
-    if (typeof inventoryManager !== 'undefined' && inventoryManager) {
-        try {
-            inventoryManager.updateFallbackFromStorage(FALLBACK_INVENTORY_ITEMS);
-            console.log('✅ Loaded from InventoryManager');
-            return true;
-        } catch (error) {
-            console.warn('⚠️ InventoryManager load failed, falling back to localStorage');
-        }
-    }
-    
-    // Fallback to direct localStorage
     const persistedInventory = localStorage.getItem('menu_inventory_currentStock');
     if (persistedInventory) {
         try {
             const persistedValues = JSON.parse(persistedInventory);
-            console.log('📦 Loading persisted inventory stock values (fallback method)...');
             
-            // Update fallback items with persisted values
             FALLBACK_INVENTORY_ITEMS.forEach(item => {
                 if (persistedValues[item.itemName] !== undefined) {
                     const oldStock = item.currentStock;
@@ -584,181 +515,18 @@ function loadInventoryWithPersistedValues() {
     return false;
 }
 
-// ✅ FIX: Save inventory stock values to prevent reset
+// ==================== SAVE INVENTORY STOCK VALUES ====================
 function saveInventoryStockValues() {
     try {
-        // Use InventoryManager if available
-        if (typeof inventoryManager !== 'undefined' && inventoryManager) {
-            inventoryManager.syncWithFallback(FALLBACK_INVENTORY_ITEMS);
-            console.log('💾 Saved inventory via InventoryManager');
-        } else {
-            const stockValues = {};
-            FALLBACK_INVENTORY_ITEMS.forEach(item => {
-                stockValues[item.itemName] = item.currentStock;
-            });
-            localStorage.setItem('menu_inventory_currentStock', JSON.stringify(stockValues));
-            console.log('💾 Saved inventory stock values (prevents reset - fallback method)');
-        }
+        const stockValues = {};
+        FALLBACK_INVENTORY_ITEMS.forEach(item => {
+            stockValues[item.itemName] = item.currentStock;
+        });
+        localStorage.setItem('menu_inventory_currentStock', JSON.stringify(stockValues));
+        console.log('💾 Saved inventory stock values to localStorage');
     } catch (error) {
         console.error('❌ Error saving inventory stock values:', error);
     }
-}
-
-// ==================== LOAD PERSISTED QUANTITIES FROM LOCALSTORAGE ====================
-function loadPersistedQuantities() {
-    try {
-        const savedQuantities = localStorage.getItem('sendStockQuantities');
-        if (savedQuantities) {
-            const quantitiesObj = JSON.parse(savedQuantities);
-            lastQuantityValues = new Map(Object.entries(quantitiesObj));
-            console.log('📦 Loaded persisted quantities from localStorage:', Object.keys(quantitiesObj).length, 'items');
-        }
-    } catch (error) {
-        console.error('❌ Error loading persisted quantities:', error);
-        lastQuantityValues = new Map();
-    }
-}
-
-// ==================== SAVE QUANTITIES TO LOCALSTORAGE ====================
-function savePersistedQuantities() {
-    try {
-        const quantitiesObj = Object.fromEntries(lastQuantityValues);
-        localStorage.setItem('sendStockQuantities', JSON.stringify(quantitiesObj));
-        console.log('💾 Saved persisted quantities to localStorage');
-    } catch (error) {
-        console.error('❌ Error saving persisted quantities:', error);
-    }
-}
-
-// ==================== CLEAR PERSISTED QUANTITIES ====================
-function clearPersistedQuantities() {
-    try {
-        localStorage.removeItem('sendStockQuantities');
-        lastQuantityValues.clear();
-        console.log('🗑️ Cleared persisted quantities from localStorage');
-    } catch (error) {
-        console.error('❌ Error clearing persisted quantities:', error);
-    }
-}
-
-// ==================== PERMANENT STOCK VALUES STORAGE - NEVER RESETS ====================
-function savePermanentStockValues() {
-    try {
-        const stockValues = {};
-        stocksData.forEach(item => {
-            stockValues[item.name] = item.quantity;
-        });
-        localStorage.setItem('sendStock_permanentValues', JSON.stringify(stockValues));
-        console.log('💾 Saved PERMANENT stock values:', Object.keys(stockValues).length, 'items');
-    } catch (error) {
-        console.error('❌ Error saving permanent stock values:', error);
-    }
-}
-
-function loadPermanentStockValues() {
-    try {
-        const saved = localStorage.getItem('sendStock_permanentValues');
-        if (saved) {
-            const stockValues = JSON.parse(saved);
-            console.log('📦 Loaded PERMANENT stock values:', Object.keys(stockValues).length, 'items');
-            return stockValues;
-        }
-    } catch (error) {
-        console.error('❌ Error loading permanent stock values:', error);
-    }
-    return {};
-}
-
-function updatePermanentStockValue(itemName, newQuantity) {
-    try {
-        const stockValues = loadPermanentStockValues();
-        stockValues[itemName] = newQuantity;
-        localStorage.setItem('sendStock_permanentValues', JSON.stringify(stockValues));
-        console.log(`💾 Updated PERMANENT stock for "${itemName}": ${newQuantity}`);
-        
-        const stockItem = stocksData.find(item => item.name === itemName);
-        if (stockItem) {
-            stockItem.quantity = newQuantity;
-        }
-    } catch (error) {
-        console.error('❌ Error updating permanent stock value:', error);
-    }
-}
-
-// ==================== 🆕 UPDATE MENU ITEM STOCK IN MONGODB ====================
-async function updateMenuItemStockInMongoDB(itemId, newStock) {
-    try {
-        console.log(`📤 Updating menu item stock in MongoDB...`);
-        console.log(`   Item ID: ${itemId}`);
-        console.log(`   New Stock: ${newStock}`);
-        
-        const response = await fetch(`${BACKEND_URL}/api/menu/${itemId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                currentStock: newStock
-            })
-        });
-        
-        if (!response.ok) {
-            console.warn(`⚠️ Failed to update menu item in MongoDB. Status: ${response.status}`);
-            const errorData = await response.json().catch(() => ({}));
-            console.warn('Error details:', errorData);
-            return false;
-        }
-        
-        const updatedItem = await response.json();
-        console.log(`✅ Menu item stock updated in MongoDB:`, updatedItem);
-        return true;
-    } catch (error) {
-        console.error('❌ Error updating menu item stock in MongoDB:', error);
-        return false;
-    }
-}
-
-// ==================== SAVE UNIQUE ITEMS TO LOCALSTORAGE ====================
-function saveUniqueItemsToLocalStorage() {
-    try {
-        const uniqueItems = {};
-        stocksData.forEach(item => {
-            if (!uniqueItems[item.name]) {
-                uniqueItems[item.name] = {
-                    id: item.id,
-                    _id: item._id,
-                    name: item.name,
-                    category: item.category,
-                    description: item.description,
-                    quantity: item.quantity,
-                    price: item.price,
-                    unit: item.unit,
-                    minStock: item.minStock,
-                    maxStock: item.maxStock
-                };
-            }
-        });
-        localStorage.setItem('sendStock_uniqueItems', JSON.stringify(Object.values(uniqueItems)));
-        console.log('💾 Saved unique items to localStorage:', Object.keys(uniqueItems).length, 'items');
-    } catch (error) {
-        console.error('❌ Error saving unique items:', error);
-    }
-}
-
-function loadUniqueItemsFromLocalStorage() {
-    try {
-        const saved = localStorage.getItem('sendStock_uniqueItems');
-        if (saved) {
-            const items = JSON.parse(saved);
-            console.log('📦 Loaded unique items from localStorage:', items.length, 'items');
-            return items;
-        }
-    } catch (error) {
-        console.error('❌ Error loading unique items:', error);
-    }
-    return null;
 }
 
 // ==================== SAVE NOTIFICATIONS TO LOCALSTORAGE ====================
@@ -767,12 +535,13 @@ function saveNotificationsToLocalStorage() {
         localStorage.setItem('menu_notifications', JSON.stringify(notifications));
         localStorage.setItem('menu_notificationCount', notificationCount.toString());
         localStorage.setItem('menu_hasNewNotifications', hasNewNotifications.toString());
-        console.log('💾 Saved notifications to localStorage:', notifications.length, 'notifications');
+        console.log('💾 Saved notifications to localStorage');
     } catch (error) {
         console.error('❌ Error saving notifications:', error);
     }
 }
 
+// ==================== LOAD NOTIFICATIONS FROM LOCALSTORAGE ====================
 function loadNotificationsFromLocalStorage() {
     try {
         const savedNotifications = localStorage.getItem('menu_notifications');
@@ -796,66 +565,6 @@ function loadNotificationsFromLocalStorage() {
     } catch (error) {
         console.error('❌ Error loading notifications:', error);
     }
-}
-
-// ==================== CHECK FOR OUT OF STOCK PRODUCTS ====================
-async function checkOutOfStockProducts() {
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/products/out-of-stock`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            const outOfStockProducts = result.data || [];
-            
-            if (outOfStockProducts.length > 0) {
-                console.log(`🚨 Found ${outOfStockProducts.length} out of stock products`);
-                
-                // Add notifications for each out-of-stock product
-                outOfStockProducts.forEach(product => {
-                    const existingNotif = notifications.find(n => 
-                        n.type === 'out_of_stock' && n.productId === product._id
-                    );
-                    
-                    if (!existingNotif) {
-                        const notification = {
-                            id: `out_of_stock_${product._id}_${Date.now()}`,
-                            type: 'out_of_stock',
-                            productId: product._id,
-                            productName: product.itemName,
-                            category: product.category,
-                            message: `🚨 ${product.itemName} is OUT OF STOCK!`,
-                            severity: 'critical',
-                            timestamp: new Date().toLocaleString('en-PH'),
-                            read: false,
-                            fulfilled: false
-                        };
-                        
-                        notifications.unshift(notification);
-                        hasNewNotifications = true;
-                    }
-                });
-                
-                saveNotificationsToLocalStorage();
-                updateNotificationBadge();
-                renderNotifications();
-            }
-        }
-    } catch (error) {
-        console.error('❌ Error checking out of stock products:', error);
-    }
-}
-
-// ==================== POLL FOR OUT OF STOCK PRODUCTS ====================
-function startOutOfStockMonitoring() {
-    console.log('📡 Starting out-of-stock product monitoring...');
-    // Check every 30 seconds
-    setInterval(checkOutOfStockProducts, 30000);
-    // Also check immediately on load
-    checkOutOfStockProducts();
 }
 
 // ==================== CATEGORY DISPLAY NAMES ====================
@@ -930,7 +639,7 @@ const menuDatabase = {
     'Rice': [
         { name: 'Korean Spicy Bulgogi (Pork)', unit: 'plate', defaultPrice: 180 },
         { name: 'Korean Salt and Pepper (Pork)', unit: 'plate', defaultPrice: 175 },
-        { name: 'Crisky Pork Lechon Kawali', unit: 'plate', defaultPrice: 165 },
+        { name: 'Crispy Pork Lechon Kawali', unit: 'plate', defaultPrice: 165 },
         { name: 'Cream Dory Fish Fillet', unit: 'plate', defaultPrice: 160 },
         { name: 'Buttered Honey Chicken', unit: 'plate', defaultPrice: 155 },
         { name: 'Buttered Spicy Chicken', unit: 'plate', defaultPrice: 155 },
@@ -1049,7 +758,6 @@ const elements = {
     menuValue: document.getElementById('menuValue'),
     totalMenuItems: document.getElementById('totalMenuItems'),
     currentCategoryTitle: document.getElementById('currentCategoryTitle'),
-    // ✅ Missing Ingredients Modal Elements
     missingIngredientsModal: document.getElementById('missingIngredientsModal'),
     closeMissingIngredientsModal: document.getElementById('closeMissingIngredientsModal'),
     closeMissingIngredientsBtn: document.getElementById('closeMissingIngredientsBtn'),
@@ -1062,72 +770,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Menu Management System initializing...');
     
     try {
-        // 1️⃣ Load notifications from localStorage FIRST
         loadNotificationsFromLocalStorage();
         console.log('✅ Notifications loaded from localStorage');
         
-        // 2️⃣ Setup UI and styles
         addNotificationStyles();
         initializeNotificationSystem();
         console.log('✅ Notification system initialized');
         
-        // 3️⃣ Start monitoring for out-of-stock products
-        startOutOfStockMonitoring();
-        console.log('✅ Out-of-stock monitoring started');
-        
-        // 4️⃣ Initialize event listeners and UI
         initializeEventListeners();
         initializeCategoryDropdown();
         console.log('✅ Event listeners initialized');
         
-        // 5️⃣ Load from localStorage FIRST
         loadFromLocalStorage();
-        loadPersistedQuantities();
         console.log('✅ Data loaded from localStorage');
         
-        // 6️⃣ Load persisted inventory stock values BEFORE using fallback
         loadInventoryWithPersistedValues();
         console.log('✅ Inventory stock values loaded');
         
-        // 7️⃣ Initialize inventory with REAL data
         currentInventoryCache = FALLBACK_INVENTORY_ITEMS;
         lastInventoryCacheTime = Date.now();
         console.log(`📦 Inventory initialized with ${currentInventoryCache.length} items`);
         
-        // 8️⃣ Try to load unique items from send stock
-        const uniqueItems = loadUniqueItemsFromLocalStorage();
-        if (uniqueItems && uniqueItems.length > 0) {
-            stocksData = uniqueItems;
-            sendStockUIInitialized = true;
-            console.log(`✅ Loaded ${uniqueItems.length} unique items from localStorage`);
-            
-            // Load permanent stock values
-            const permanentStockValues = loadPermanentStockValues();
-            stocksData.forEach(item => {
-                if (permanentStockValues[item.name] !== undefined) {
-                    item.quantity = permanentStockValues[item.name];
-                }
-            });
-        }
-        
-        // 9️⃣ Show dashboard section
         showSection('dashboard');
         console.log('✅ Dashboard section displayed');
         
-        // 1️⃣0️⃣ Try to connect to real-time notifications
         connectToNotificationServer();
-        connectWebSocket();
         console.log('✅ Real-time connections initiated');
         
-        // 1️⃣1️⃣ Load pending stock requests from database
-        console.log('📦 Loading pending stock requests from MongoDB...');
-        await loadPendingStockRequests();
-        
-        // 1️⃣2️⃣ Fetch menu items from backend
-        console.log('📋 Fetching menu items from backend...');
         await fetchMenuItems();
         
-        // If fetchMenuItems didn't load anything, use fallback
         if (!allMenuItems || allMenuItems.length === 0) {
             console.log('⚠️ No menu items from backend, using fallback data');
             initializeFallbackData();
@@ -1137,9 +808,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
     } catch (error) {
         console.error('❌ Critical error during initialization:', error);
-        console.log('💾 Falling back to localStorage data...');
         
-        // Try to load from localStorage as last resort
         if (!allMenuItems || allMenuItems.length === 0) {
             initializeFallbackData();
         }
@@ -1148,110 +817,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ==================== 📦 LOAD PENDING STOCK REQUESTS FROM DATABASE ====================
-async function loadPendingStockRequests() {
-    try {
-        console.log('📡 Fetching pending stock requests from /api/stock-requests?status=pending...');
-        
-        const response = await fetch(`${BACKEND_URL}/api/stock-requests?status=pending`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        
-        if (!response.ok) {
-            console.warn(`⚠️ Failed to load pending requests: ${response.status}`);
-            return;
-        }
-        
-        const responseData = await response.json();
-        const pendingRequests = responseData.data || [];
-        
-        console.log(`📦 Loaded ${pendingRequests.length} pending stock requests from database`);
-        
-        // Add each pending request as a notification
-        if (Array.isArray(pendingRequests) && pendingRequests.length > 0) {
-            for (const request of pendingRequests) {
-                const exists = notifications.some(n =>
-                    n.type === 'stock_request' &&
-                    n.requestData &&
-                    n.requestData._id === request._id
-                );
-                
-                if (!exists) {
-                    console.log(`✅ Adding notification for pending request: ${request.productName} x${request.requestedQuantity}`);
-                    addNotification(
-                        request.productName,
-                        `Requested ${request.requestedQuantity} ${request.unit}`,
-                        'stock_request',
-                        request.priority || 'medium',
-                        request.requestedBy || 'Staff',
-                        {
-                            _id: request._id,
-                            quantity: request.requestedQuantity,
-                            unit: request.unit,
-                            priority: request.priority,
-                            notes: request.notes || ''
-                        }
-                    );
-                }
-            }
-            
-            // Update notification badge
-            updateNotificationBadge();
-            console.log(`✅ ${pendingRequests.length} pending stock requests loaded and notifications created`);
-        } else {
-            console.log('✅ No pending stock requests found');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error loading pending stock requests:', error.message);
-    }
-}
-
-// ==================== CONNECT TO WEBSOCKET ====================
-// Note: WebSocket is now optional - we're using SSE for real-time updates instead
-function connectWebSocket() {
-    try {
-        // Close existing connection
-        if (adminWebSocket) {
-            adminWebSocket.close();
-        }
-        
-        // Connect to WebSocket server on base /ws path
-        // The server will identify this as admin based on the request context
-        adminWebSocket = new WebSocket(`ws://localhost:5050/ws`);
-        
-        adminWebSocket.onopen = function() {
-            console.log('✅ Admin WebSocket connected');
-        };
-        
-        adminWebSocket.onerror = function(error) {
-            // Silently fail - WebSocket is optional, SSE is primary
-            console.log('ℹ️ WebSocket not available, using SSE for updates');
-            adminWebSocket = null;
-        };
-        
-        adminWebSocket.onclose = function() {
-            adminWebSocket = null;
-            // Don't reconnect automatically - SSE is handling updates
-        };
-    } catch (error) {
-        // WebSocket not available - this is ok, SSE is primary method
-        console.log('ℹ️ WebSocket unavailable, relying on SSE for real-time updates');
-        adminWebSocket = null;
-    }
-}
-
 // ==================== CONNECT TO NOTIFICATION SERVER ====================
 function connectToNotificationServer() {
     try {
-        // Close existing connection
         if (notificationEventSource) {
             notificationEventSource.close();
         }
         
-        // Try to connect to SSE endpoint
         notificationEventSource = new EventSource(`${BACKEND_URL}/api/admin/events`);
         
         notificationEventSource.onmessage = function(event) {
@@ -1259,18 +831,13 @@ function connectToNotificationServer() {
                 const data = JSON.parse(event.data);
                 console.log('📨 Received notification:', data);
                 
-                if (data.type === 'stock_request') {
-                    handleStockRequestNotification(data);
-                } else if (data.type === 'low_stock_alert') {
+                if (data.type === 'low_stock_alert') {
                     handleLowStockAlert(data);
                 }
-            } catch (e) {
-                // Silently fail on parse error
-            }
+            } catch (e) {}
         };
         
         notificationEventSource.onerror = function() {
-            // Silently fail - notifications are optional
             notificationEventSource.close();
             notificationEventSource = null;
         };
@@ -1279,7 +846,6 @@ function connectToNotificationServer() {
             console.log('✅ Connected to notification server');
         };
     } catch (error) {
-        // Notification server not available - this is ok
         notificationEventSource = null;
     }
 }
@@ -1287,18 +853,8 @@ function connectToNotificationServer() {
 // ==================== INITIALIZE FALLBACK DATA ====================
 function initializeFallbackData() {
     console.log('📋 Initializing fallback menu data...');
-    
-    // Set allMenuItems
     allMenuItems = FALLBACK_MENU_ITEMS;
-    
-    // Build unique stocks data
-    buildUniqueStocksData(allMenuItems);
-    
-    // Save to localStorage
     saveToLocalStorage();
-    saveUniqueItemsToLocalStorage();
-    savePermanentStockValues();
-    
     updateAllUIComponents();
 }
 
@@ -1312,7 +868,6 @@ function loadFromLocalStorage() {
             console.log('📦 Loaded from localStorage:', allMenuItems.length, 'items');
             updateAllUIComponents();
         } else {
-            // No backup, use fallback
             allMenuItems = FALLBACK_MENU_ITEMS;
             console.log('📋 Using fallback menu data:', allMenuItems.length, 'items');
         }
@@ -1365,30 +920,6 @@ function addNotificationStyles() {
         .notification-item.unread {
             background: #fff8e1;
             border-left: 4px solid #ff9800;
-        }
-        
-        .notification-priority {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: 8px;
-        }
-        
-        .priority-normal {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .priority-urgent {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        .priority-asap {
-            background: #dc3545;
-            color: white;
         }
         
         .toast {
@@ -1445,87 +976,13 @@ function addNotificationStyles() {
             font-size: 14px;
             color: #333;
         }
-
-        .send-stock-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background 0.2s;
-        }
         
-        .send-stock-btn:hover {
-            background: #218838;
-        }
-        
-        .send-stock-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .send-stock-btn.btn-danger {
-            background: #dc3545;
-        }
-        
-        .send-stock-btn.btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .ingredient-ok {
-            color: #28a745;
-            font-size: 11px;
-            margin-left: 4px;
-        }
-        
-        .ingredient-missing {
-            color: #dc3545;
-            font-size: 11px;
-            margin-left: 4px;
-        }
-        
-        .quantity-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .quantity-btn {
-            width: 30px;
-            height: 30px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .quantity-btn:hover {
-            background: #f8f9fa;
-        }
-        
-        .quantity-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .quantity-input {
-            width: 70px;
-            text-align: center;
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .status {
+        .status-badge {
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 500;
+            display: inline-block;
         }
         
         .status-available {
@@ -1548,216 +1005,121 @@ function addNotificationStyles() {
             color: #004085;
         }
         
-        .staff-stock-info {
-            font-size: 11px;
-            color: #666;
-            margin-top: 4px;
-            padding: 4px;
-            background: #f8f9fa;
+        .stock-progress {
+            width: 100%;
+            height: 8px;
+            background: #eee;
             border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
         }
         
-        .warning-icon {
-            color: #ff9800;
-            margin-right: 4px;
-        }
-        
-        .permanent-stock-badge {
-            display: inline-block;
-            background: #6c757d;
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 6px;
-        }
-        
-        /* PAGINATION STYLES */
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        
-        .pagination-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .pagination-btn {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .pagination-btn:hover:not(:disabled) {
-            background: #f8f9fa;
-            border-color: #28a745;
-            color: #28a745;
-        }
-        
-        .pagination-btn.active {
+        .progress-bar {
+            height: 100%;
             background: #28a745;
-            color: white;
-            border-color: #28a745;
+            transition: width 0.3s;
         }
         
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .items-per-page {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .page-info {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .offline-badge {
-            display: inline-block;
+        .progress-bar.warning {
             background: #ffc107;
-            color: #212529;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-left: 10px;
         }
         
-        .notification-actions {
+        .progress-bar.danger {
+            background: #dc3545;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .menu-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .quick-add-section {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .quick-add-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .quick-add-controls {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            align-items: center;
         }
         
-        .notification-btn {
-            padding: 4px 12px;
+        .quick-add-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .quick-add-input:focus {
+            border-color: #28a745;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+        }
+        
+        .quick-add-btn {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
         
-        .notification-btn.fulfill {
-            background: #28a745;
-            color: white;
-        }
-        
-        .notification-btn.fulfill:hover {
+        .quick-add-btn:hover {
             background: #218838;
         }
         
-        .notification-btn.dismiss {
+        .quick-add-btn:disabled {
             background: #6c757d;
-            color: white;
-        }
-        
-        .notification-btn.dismiss:hover {
-            background: #5a6268;
-        }
-        
-        .notification-time {
-            font-size: 11px;
-            color: #999;
-        }
-        
-        .staff-name {
-            font-weight: 600;
-            color: #007bff;
+            cursor: not-allowed;
         }
     `;
     document.head.appendChild(style);
-}
-
-// ==================== PAGINATION FUNCTIONS ====================
-function updatePagination() {
-    const paginationContainer = document.getElementById('paginationContainer');
-    if (!paginationContainer) return;
-    
-    if (!filteredStocksData || filteredStocksData.length === 0) {
-        paginationContainer.style.display = 'none';
-        return;
-    }
-    
-    paginationContainer.style.display = 'block';
-    
-    const startItem = ((currentPage - 1) * itemsPerPage) + 1;
-    const endItem = Math.min(currentPage * itemsPerPage, filteredStocksData.length);
-    
-    paginationContainer.innerHTML = `
-        <div class="pagination-container">
-            <div class="page-info">
-                Showing ${startItem} to ${endItem} of ${filteredStocksData.length} items
-            </div>
-            <div class="pagination-controls">
-                <button class="pagination-btn" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>
-                    <i class="fas fa-angle-double-left"></i>
-                </button>
-                <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
-                    <i class="fas fa-angle-left"></i>
-                </button>
-                
-                ${generatePageButtons()}
-                
-                <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
-                    <i class="fas fa-angle-right"></i>
-                </button>
-                <button class="pagination-btn" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
-                    <i class="fas fa-angle-double-right"></i>
-                </button>
-                
-                <select id="itemsPerPageSelect" name="itemsPerPage" class="items-per-page" onchange="changeItemsPerPage(this.value)">
-                    <option value="10" ${itemsPerPage === 10 ? 'selected' : ''}>10 per page</option>
-                    <option value="15" ${itemsPerPage === 15 ? 'selected' : ''}>15 per page</option>
-                    <option value="20" ${itemsPerPage === 20 ? 'selected' : ''}>20 per page</option>
-                    <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50 per page</option>
-                </select>
-            </div>
-        </div>
-    `;
-}
-
-function generatePageButtons() {
-    let buttons = '';
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        buttons += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
-    }
-    
-    return buttons;
-}
-
-function changePage(page) {
-    currentPage = page;
-    renderSendStockTable();
-}
-
-function changeItemsPerPage(value) {
-    itemsPerPage = parseInt(value);
-    currentPage = 1;
-    renderSendStockTable();
 }
 
 // ==================== INITIALIZE NOTIFICATION SYSTEM ====================
@@ -1779,7 +1141,6 @@ function initializeNotificationSystem() {
         <i class="fas fa-bell"></i>
         <span>Notifications</span>
         <span id="notificationBadge" class="notification-badge" style="display: ${notificationCount > 0 ? 'flex' : 'none'};">${notificationCount > 99 ? '99+' : notificationCount}</span>
-        <span class="offline-badge" id="offlineBadge" style="display: inline-block;">Offline Mode</span>
     `;
     notificationBtn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -1822,7 +1183,7 @@ function initializeNotificationSystem() {
         const headerTitle = document.createElement('h3');
         headerTitle.textContent = 'Notifications';
         headerTitle.style.cssText = 'margin: 0; font-size: 16px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px;';
-        headerTitle.innerHTML = `<i class="fas fa-bell" style="color: #007bff;"></i> Stock Requests`;
+        headerTitle.innerHTML = `<i class="fas fa-bell" style="color: #007bff;"></i> System Alerts`;
         
         const clearAllBtn = document.createElement('button');
         clearAllBtn.textContent = 'Clear All';
@@ -1860,7 +1221,7 @@ function initializeNotificationSystem() {
         emptyState.innerHTML = `
             <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
             <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">No notifications</h3>
-            <p style="margin: 0; color: #999; font-size: 14px;">When staff request stock, they will appear here</p>
+            <p style="margin: 0; color: #999; font-size: 14px;">When low stock alerts occur, they will appear here</p>
         `;
         notificationList.appendChild(emptyState);
         
@@ -1905,7 +1266,6 @@ function toggleNotificationModal() {
         notificationContainer.style.display = 'flex';
         isNotificationModalOpen = true;
         
-        // Mark all as read when opening
         hasNewNotifications = false;
         notifications.forEach(notification => { 
             notification.read = true; 
@@ -1917,7 +1277,7 @@ function toggleNotificationModal() {
     }
 }
 
-function addNotification(productName, message, type = 'info', priority = 'normal', staffName = 'Staff', requestData = null) {
+function addNotification(message, type = 'info', productName = '') {
     const notification = {
         id: Date.now() + Math.random(),
         productName: productName,
@@ -1927,10 +1287,7 @@ function addNotification(productName, message, type = 'info', priority = 'normal
         fullDateTime: new Date().toISOString(),
         read: false,
         type: type,
-        priority: priority,
-        staffName: staffName,
-        fulfilled: false,
-        requestData: requestData
+        fulfilled: false
     };
     
     notifications.unshift(notification);
@@ -1941,58 +1298,21 @@ function addNotification(productName, message, type = 'info', priority = 'normal
     renderNotifications();
     saveNotificationsToLocalStorage();
     
-    // Show toast notification
-    const priorityEmoji = { 
-        'normal': '📦', 
-        'urgent': '⚠️', 
-        'asap': '🔴' 
-    }[priority] || '📦';
+    const typeEmoji = { 
+        'success': '✅', 
+        'error': '❌', 
+        'warning': '⚠️',
+        'info': 'ℹ️'
+    }[type] || 'ℹ️';
     
-    const priorityText = priority === 'asap' ? 'ASAP' : priority.charAt(0).toUpperCase() + priority.slice(1);
-    showToast(`${priorityEmoji} ${priorityText}: ${productName} (${message})`, 'info');
-}
-
-function handleStockRequestNotification(data) {
-    // Check if we already have this request
-    const exists = notifications.some(n => 
-        n.type === 'stock_request' && 
-        n.requestData && 
-        n.requestData._id === data.requestId
-    );
-    
-    if (!exists) {
-        const priority = data.priority || 'normal';
-        const staffName = data.staffName || 'Staff Member';
-        const quantity = data.requestedQuantity || 10;
-        const unit = data.unit || 'units';
-        
-        addNotification(
-            data.productName,
-            `Requested ${quantity} ${unit}`,
-            'stock_request',
-            priority,
-            staffName,
-            {
-                _id: data.requestId,
-                quantity: quantity,
-                unit: unit,
-                priority: priority,
-                notes: data.data?.notes || ''
-            }
-        );
-        
-        console.log(`✅ Added stock request notification for ${data.productName}`);
-    }
+    showToast(`${typeEmoji} ${message}`, type);
 }
 
 function handleLowStockAlert(data) {
     addNotification(
-        data.productName,
-        `Low stock alert: Only ${data.currentStock} ${data.unit} left`,
-        'low_stock',
-        'urgent',
-        'System',
-        data
+        `Low stock alert: ${data.productName} - Only ${data.currentStock} ${data.unit} left`,
+        'warning',
+        data.productName
     );
 }
 
@@ -2000,7 +1320,6 @@ function updateNotificationBadge() {
     const badge = document.getElementById('notificationBadge');
     if (!badge) return;
     
-    // Count only unread and unfulfilled notifications
     notificationCount = notifications.filter(n => !n.read && !n.fulfilled).length;
     
     if (notificationCount > 0) {
@@ -2021,7 +1340,6 @@ function renderNotifications() {
     
     notificationList.innerHTML = '';
     
-    // Filter out fulfilled notifications
     const activeNotifications = notifications.filter(n => !n.fulfilled);
     
     if (activeNotifications.length === 0) {
@@ -2042,29 +1360,13 @@ function renderNotifications() {
             position: relative;
         `;
         
-        // Priority badge
-        let priorityBadge = '';
-        if (notification.priority) {
-            let priorityClass = 'priority-normal';
-            let priorityText = 'Normal';
-            
-            if (notification.priority === 'urgent') {
-                priorityClass = 'priority-urgent';
-                priorityText = 'Urgent';
-            } else if (notification.priority === 'asap') {
-                priorityClass = 'priority-asap';
-                priorityText = 'ASAP';
-            }
-            
-            priorityBadge = `<span class="notification-priority ${priorityClass}">${priorityText}</span>`;
-        }
+        const typeEmoji = {
+            'success': '✅',
+            'error': '❌',
+            'warning': '⚠️',
+            'info': 'ℹ️'
+        }[notification.type] || '📋';
         
-        // Staff name
-        const staffDisplay = notification.staffName ? 
-            `<span class="staff-name">${notification.staffName}</span>` : 
-            'Staff';
-        
-        // Format time
         const timeDisplay = notification.fullDateTime ? 
             new Date(notification.fullDateTime).toLocaleString() : 
             `${notification.date} ${notification.timestamp}`;
@@ -2072,42 +1374,31 @@ function renderNotifications() {
         notificationItem.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                 <div style="font-weight: 600; color: #333; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                    ${notification.type === 'stock_request' ? '📦' : '⚠️'} 
-                    ${notification.productName || 'System Notification'}
-                    ${priorityBadge}
+                    ${typeEmoji} ${notification.productName || 'System Notification'}
                 </div>
                 ${!notification.read ? '<span style="color: #ff9800; font-size: 12px;">● New</span>' : ''}
             </div>
-            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">
-                <span style="font-weight: 500;">${staffDisplay}</span> ${notification.message}
+            <div style="color: #666; font-size: 13px; margin-bottom: 8px;">
+                ${notification.message}
             </div>
-            ${notification.requestData?.notes ? `
-                <div style="color: #999; font-size: 12px; margin-bottom: 8px; font-style: italic;">
-                    📝 ${notification.requestData.notes}
-                </div>
-            ` : ''}
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="color: #999; font-size: 11px;">
                     <i class="far fa-clock"></i> ${timeDisplay}
                 </div>
-                ${notification.type === 'stock_request' ? `
-                    <div class="notification-actions">
-                        <button class="notification-btn fulfill" onclick="fulfillStockRequest('${notification.id}', '${notification.productName}', ${notification.requestData?.quantity || 10}, '${notification.requestData?.unit || 'units'}')">
-                            <i class="fas fa-check"></i> Fulfill
-                        </button>
-                        <button class="notification-btn dismiss" onclick="dismissNotification('${notification.id}')">
-                            <i class="fas fa-times"></i> Dismiss
-                        </button>
-                    </div>
-                ` : ''}
+                <button class="notification-dismiss" onclick="dismissNotification('${notification.id}')" style="
+                    background: none;
+                    border: 1px solid #6c757d;
+                    color: #6c757d;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    cursor: pointer;
+                ">Dismiss</button>
             </div>
         `;
         
         notificationItem.addEventListener('click', function(e) {
-            // Don't trigger if clicking on buttons
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                return;
-            }
+            if (e.target.tagName === 'BUTTON') return;
             
             notification.read = true;
             updateNotificationBadge();
@@ -2117,169 +1408,6 @@ function renderNotifications() {
         
         notificationList.appendChild(notificationItem);
     });
-}
-
-function fulfillStockRequest(notificationId, productName, quantity, unit) {
-    console.log(`\n✅ ========== FULFILLING STOCK REQUEST ==========`);
-    console.log(`Product: ${productName}`);
-    console.log(`Quantity: ${quantity} ${unit}`);
-    console.log(`Notification ID: ${notificationId}`);
-    console.log(`================================================\n`);
-    
-    // Find the notification
-    const notification = notifications.find(n => n.id === notificationId);
-    if (!notification) {
-        console.error(`❌ Notification not found: ${notificationId}`);
-        showToast('❌ Notification not found', 'error');
-        return;
-    }
-    
-    // Find the product
-    const product = allMenuItems.find(p => p.name === productName || p.itemName === productName);
-    if (!product) {
-        console.error(`❌ Product not found: ${productName}`);
-        showToast(`❌ Product "${productName}" not found in menu`, 'error');
-        return;
-    }
-    
-    // Show confirmation dialog
-    const confirmHTML = `
-        <div id="fulfillConfirmDialog" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 11000; align-items: center; justify-content: center;">
-            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h2 style="margin-top: 0; color: #333;">Fulfill Stock Request</h2>
-                <p style="color: #666; font-size: 16px; margin: 15px 0;">
-                    Add <strong>${quantity} ${unit}</strong> of <strong>${productName}</strong> to inventory?
-                </p>
-                <p style="color: #666; font-size: 14px; margin: 10px 0;">
-                    Current stock: ${product.stock || 0}/${product.maxStock || 100}
-                </p>
-                <p style="color: #666; font-size: 14px; margin: 10px 0;">
-                    After fulfillment: ${(product.stock || 0) + quantity}/${product.maxStock || 100}
-                </p>
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
-                    <button onclick="closeFulfillConfirm()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; background: #f0f0f0; color: #333;">Cancel</button>
-                    <button onclick="submitFulfillRequest('${notificationId}', '${productName}', ${quantity}, '${unit}')" style="padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #4CAF50; color: white;">Fulfill Request</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', confirmHTML);
-}
-
-function closeFulfillConfirm() {
-    const dialog = document.getElementById('fulfillConfirmDialog');
-    if (dialog) dialog.remove();
-}
-
-async function submitFulfillRequest(notificationId, productName, quantity, unit) {
-    const dialog = document.getElementById('fulfillConfirmDialog');
-    if (dialog) dialog.remove();
-    
-    console.log(`\n📤 ========== SUBMITTING FULFILL REQUEST ==========`);
-    console.log(`Product: ${productName}`);
-    console.log(`Quantity: ${quantity} ${unit}`);
-    console.log(`Notification ID: ${notificationId}`);
-    console.log(`=================================================\n`);
-    
-    try {
-        // Get product details
-        const product = allMenuItems.find(p => p.name === productName || p.itemName === productName);
-        if (!product) {
-            console.error(`❌ Product not found: ${productName}`);
-            showToast(`❌ Product not found`, 'error');
-            return;
-        }
-        
-        // Call backend to fulfill request
-        const response = await fetch(`${BACKEND_URL}/api/stock-requests/fulfill`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                notificationId: notificationId,
-                productId: product._id,
-                productName: productName,
-                quantity: quantity,
-                unit: unit,
-                newStock: (product.currentStock || 0) + quantity
-            })
-        });
-        
-        const responseData = await response.json();
-        console.log(`📡 Backend Response:`, responseData);
-        
-        if (response.ok && (response.status === 200 || response.status === 201)) {
-            // ✅ SUCCESS: Request fulfilled
-            console.log(`✅ Stock request fulfilled successfully`);
-            
-            // Update product stock locally
-            product.currentStock = (product.currentStock || 0) + quantity;
-            console.log(`✅ Updated ${productName} stock to ${product.currentStock}`);
-            
-            // Mark notification as fulfilled
-            const notification = notifications.find(n => n.id === notificationId);
-            if (notification) {
-                notification.fulfilled = true;
-                notification.read = true;
-                console.log(`✅ Marked notification ${notificationId} as fulfilled`);
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('allMenuItems', JSON.stringify(allMenuItems));
-            saveNotificationsToLocalStorage();
-            console.log(`💾 Data saved to localStorage`);
-            
-            // Update all UI components
-            updateAllUIComponents();
-            updateNotificationBadge();
-            renderNotifications();
-            console.log(`✅ UI components updated`);
-            
-            // Show success notification
-            const notification_ui = document.createElement('div');
-            notification_ui.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #4CAF50;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                z-index: 11005;
-                font-weight: bold;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-                animation: slideInRight 0.3s ease-in-out;
-            `;
-            notification_ui.innerHTML = `✅ Stock request fulfilled! Added ${quantity} ${unit} to ${productName}`;
-            document.body.appendChild(notification_ui);
-            
-            setTimeout(() => {
-                if (notification_ui.parentElement) {
-                    notification_ui.remove();
-                }
-            }, 4000);
-            
-        } else if (response.status === 400) {
-            // ❌ BAD REQUEST
-            console.error(`❌ Bad Request (400): ${responseData.message}`);
-            showToast(`❌ Error: ${responseData.message || 'Invalid request'}`, 'error');
-            
-        } else if (response.status === 404) {
-            // ❌ NOT FOUND
-            console.error(`❌ Not Found (404): ${responseData.message}`);
-            showToast(`❌ Stock request not found`, 'error');
-            
-        } else {
-            // ❌ OTHER ERRORS
-            console.error(`❌ Error (${response.status}): ${responseData.message || 'Unknown error'}`);
-            showToast(`❌ Failed to fulfill request: ${responseData.message || 'Unknown error'}`, 'error');
-        }
-        
-    } catch (error) {
-        console.error(`❌ Network error:`, error.message);
-        showToast(`❌ Network error: ${error.message}`, 'error');
-    }
 }
 
 function dismissNotification(notificationId) {
@@ -2294,12 +1422,13 @@ function dismissNotification(notificationId) {
         
         showToast('Notification dismissed', 'info');
     }
+    event.stopPropagation();
 }
 
 function clearAllNotifications() {
     if (notifications.length === 0) return;
     
-    if (confirm('Mark all notifications as fulfilled?')) {
+    if (confirm('Mark all notifications as dismissed?')) {
         notifications.forEach(notification => {
             notification.fulfilled = true;
             notification.read = true;
@@ -2316,38 +1445,32 @@ function clearAllNotifications() {
     }
 }
 
-// ==================== 🆕 FIXED: CHECK INGREDIENT AVAILABILITY - NOW USES REAL INGREDIENT INVENTORY ====================
+// ==================== CHECK INGREDIENT AVAILABILITY ====================
 async function checkIngredientAvailability(itemName) {
     try {
         console.log(`🔍 Checking ingredient availability for: ${itemName}`);
         
-        // Get product recipe from map
         const recipe = productIngredientMap[itemName];
         
-        // ✅ OPTIONAL RECIPE MODE: If no recipe found, allow product (no strict validation)
-        // Products CAN be created without recipes - recipes can be added later
         if (!recipe) {
             console.log(`ℹ️ No recipe found for "${itemName}" - Creating product without recipe (optional)`);
             return {
-                available: true,  // Allow product creation even without recipe
+                available: true,
                 missingIngredients: [],
                 availableIngredients: [],
                 allIngredientsPresent: false,
-                requiredIngredients: [],
-                reason: 'NO_RECIPE_DEFINED_YET'  // Info only, not blocking
+                requiredIngredients: []
             };
         }
         
-        // ✅ OPTIONAL INGREDIENTS MODE: If recipe has no ingredients, allow the product
         if (!recipe.ingredients || Object.keys(recipe.ingredients).length === 0) {
             console.log(`ℹ️ No ingredients defined for "${itemName}" - Creating product without ingredients (optional)`);
             return {
-                available: true,  // Allow product creation even without ingredients
-                missingIngredients: [`NO INGREDIENTS DEFINED - Add ingredients to recipe first`],
+                available: true,
+                missingIngredients: [],
                 availableIngredients: [],
                 allIngredientsPresent: false,
-                requiredIngredients: [],
-                reason: 'NO_INGREDIENTS'
+                requiredIngredients: []
             };
         }
         
@@ -2356,24 +1479,20 @@ async function checkIngredientAvailability(itemName) {
         const missingIngredients = [];
         const availableIngredients = [];
         
-        // ✅ Use FALLBACK_INVENTORY_ITEMS as the inventory database
         const inventoryItems = FALLBACK_INVENTORY_ITEMS || [];
         
-        // Check each ingredient from recipe
         for (const [ingredientName, requiredAmount] of Object.entries(recipe.ingredients)) {
             console.log(`   Checking ingredient: ${ingredientName} (required: ${requiredAmount})`);
             
-            // ✅ FIX: Convert underscore to space for matching (cooking_oil -> cooking oil)
             const normalizedIngredientName = ingredientName.replace(/_/g, ' ');
             
-            // ✅ FIX: Check against actual inventory database (FALLBACK_INVENTORY_ITEMS)
             const dbInventoryItem = inventoryItems.find(item => 
                 item.itemName.toLowerCase() === normalizedIngredientName.toLowerCase()
             );
             
             if (!dbInventoryItem) {
-                console.warn(`   ❌ NOT FOUND in database inventory: ${ingredientName} (looked for: ${normalizedIngredientName})`);
-                missingIngredients.push(`${normalizedIngredientName} (NOT IN INVENTORY DATABASE)`);
+                console.warn(`   ❌ NOT FOUND in inventory: ${ingredientName}`);
+                missingIngredients.push(`${normalizedIngredientName} (NOT IN INVENTORY)`);
                 continue;
             }
             
@@ -2386,7 +1505,7 @@ async function checkIngredientAvailability(itemName) {
                 console.warn(`   ❌ OUT OF STOCK: ${ingredientName}`);
                 missingIngredients.push(`${ingredientName} (OUT OF STOCK - ${currentStock.toFixed(1)} ${unit})`);
             } else if (currentStock < requiredAmount) {
-                console.warn(`   ⚠️ INSUFFICIENT STOCK: ${ingredientName} need ${requiredAmount}, have ${currentStock}`);
+                console.warn(`   ⚠️ INSUFFICIENT STOCK: ${ingredientName}`);
                 missingIngredients.push(`${ingredientName} (INSUFFICIENT - need ${requiredAmount} ${unit}, have ${currentStock.toFixed(1)} ${unit})`);
             } else {
                 console.log(`   ✅ SUFFICIENT STOCK: ${ingredientName}`);
@@ -2395,202 +1514,29 @@ async function checkIngredientAvailability(itemName) {
         }
         
         const hasAllIngredients = missingIngredients.length === 0;
-        console.log(`\n📊 Availability Result for "${itemName}":
-            Available: ${hasAllIngredients ? '✅' : '❌'}
-            Missing: ${missingIngredients.length}
-            Available: ${availableIngredients.length}\n`);
+        console.log(`\n📊 Availability Result for "${itemName}": Available: ${hasAllIngredients ? '✅' : '❌'}\n`);
         
         return {
             available: hasAllIngredients,
             missingIngredients: missingIngredients,
             availableIngredients: availableIngredients,
             allIngredientsPresent: hasAllIngredients,
-            requiredIngredients: Object.keys(recipe.ingredients),
-            reason: hasAllIngredients ? 'ALL_INGREDIENTS_AVAILABLE' : 'MISSING_INGREDIENTS'
+            requiredIngredients: Object.keys(recipe.ingredients)
         };
     } catch (error) {
         console.error('❌ Error checking ingredient availability:', error);
-        console.error('Stack:', error.stack);
         return {
-            available: false, // ✅ Default to false to BLOCK adding
-            missingIngredients: ['Error checking inventory - cannot add product'],
+            available: false,
+            missingIngredients: ['Error checking inventory'],
             availableIngredients: [],
             allIngredientsPresent: false,
-            requiredIngredients: [],
-            reason: 'ERROR'
+            requiredIngredients: []
         };
     }
 }
 
-// ==================== 🆕 FIXED: CHECK SERVINGWARE AVAILABILITY ====================
-function checkServingwareAvailability(itemName) {
-    try {
-        const recipe = productIngredientMap[itemName];
-        
-        if (!recipe || !recipe.servingware) {
-            return {
-                available: true,
-                missingServingware: []
-            };
-        }
-        
-        const servingwareType = recipe.servingware;
-        
-        if (!servingwareInventory[servingwareType]) {
-            return {
-                available: true,
-                missingServingware: []
-            };
-        }
-        
-        const servingware = servingwareInventory[servingwareType];
-        
-        if (servingware.current <= 0) {
-            return {
-                available: false,
-                missingServingware: [`${servingware.name} (out of stock)`]
-            };
-        }
-        
-        return {
-            available: true,
-            missingServingware: []
-        };
-    } catch (error) {
-        console.error('Error checking servingware availability:', error);
-        return {
-            available: true,
-            missingServingware: []
-        };
-    }
-}
-
-// ==================== 🆕 FIXED: COMPLETE AVAILABILITY CHECK ====================
-async function checkFullProductAvailability(itemName) {
-    const ingredientCheck = await checkIngredientAvailability(itemName);
-    const servingwareCheck = checkServingwareAvailability(itemName);
-    
-    const allMissing = [
-        ...ingredientCheck.missingIngredients,
-        ...servingwareCheck.missingServingware
-    ];
-    
-    return {
-        available: ingredientCheck.available && servingwareCheck.available,
-        missingItems: allMissing,
-        missingIngredients: ingredientCheck.missingIngredients,
-        missingServingware: servingwareCheck.missingServingware,
-        ingredientCheck: ingredientCheck,
-        servingwareCheck: servingwareCheck
-    };
-}
-
-// ==================== 🆕 FIXED: EMIT REAL-TIME EVENT TO STAFF ====================
-async function emitStockTransferToStaff(stock, quantityToSend, unit) {
-    console.log('='.repeat(60));
-    console.log(`📡 EMITTING REAL-TIME STOCK TRANSFER TO STAFF`);
-    console.log(`📦 Item: ${stock.name} | Qty: ${quantityToSend} ${unit}`);
-    console.log('='.repeat(60));
-    
-    const transferData = {
-        type: 'stock_transfer',
-        action: 'stock_received',
-        itemName: stock.name,
-        itemId: stock._id,
-        quantitySent: quantityToSend,
-        unit: unit,
-        newStaffStock: quantityToSend,
-        timestamp: new Date().toISOString(),
-        transferredBy: 'admin'
-    };
-    
-    const results = {
-        sse: false,
-        websocket: false,
-        api: false
-    };
-    
-    // ==================== METHOD 1: BROADCAST VIA SERVER (PRIMARY METHOD) ====================
-    try {
-        console.log('📤 Calling /api/admin/emit-stock-transfer endpoint...');
-        const eventResponse = await fetch(`${BACKEND_URL}/api/admin/emit-stock-transfer`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify(transferData)
-        });
-        
-        if (eventResponse.ok) {
-            results.sse = true;
-            const responseData = await eventResponse.json();
-            console.log('✅ STOCK TRANSFER BROADCASTED TO ALL STAFF:', responseData);
-        } else {
-            console.warn('⚠️ SSE emission failed with status:', eventResponse.status);
-        }
-    } catch (e) {
-        console.warn('⚠️ SSE endpoint error:', e.message);
-    }
-    
-    // METHOD 2: WebSocket (Backup)
-    try {
-        if (adminWebSocket && adminWebSocket.readyState === WebSocket.OPEN) {
-            adminWebSocket.send(JSON.stringify({
-                type: 'admin:stock_transfer',
-                data: transferData
-            }));
-            results.websocket = true;
-            console.log('✅ Real-time event emitted via WebSocket');
-        }
-    } catch (e) {
-        console.warn('⚠️ WebSocket emission failed:', e.message);
-    }
-    
-    // METHOD 3: Direct Staff Inventory API (Backup)
-    try {
-        const staffUpdateResponse = await fetch(`${BACKEND_URL}/api/staff/inventory/receive`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify(transferData)
-        });
-        
-        if (staffUpdateResponse.ok) {
-            results.api = true;
-            console.log('✅ Staff inventory updated via API');
-        }
-    } catch (e) {
-        console.warn('⚠️ Could not update staff inventory directly:', e.message);
-    }
-    
-    // METHOD 4: LocalStorage + BroadcastChannel (for offline mode)
-    try {
-        // Save to localStorage for staff to pick up on next load
-        const pendingTransfers = JSON.parse(localStorage.getItem('pendingStockTransfers') || '[]');
-        pendingTransfers.push({
-            ...transferData,
-            savedAt: Date.now()
-        });
-        localStorage.setItem('pendingStockTransfers', JSON.stringify(pendingTransfers));
-        console.log('✅ Saved transfer to pending queue in localStorage');
-    } catch (e) {
-        console.warn('⚠️ Could not save to localStorage:', e.message);
-    }
-    
-    console.log('='.repeat(60));
-    console.log(`📡 Transfer emission results:`, results);
-    console.log('='.repeat(60));
-    
-    return results;
-}
-
-// ==================== TOAST NOTIFICATION ====================
-function showToast(message, type = 'success') {
+// ==================== SHOW TOAST ====================
+function showToast(message, type = 'success', duration = 5000) {
     let container = document.getElementById('toastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -2610,9 +1556,6 @@ function showToast(message, type = 'success') {
     
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
-    // ✅ Different duration for different types - errors show longer
-    const duration = type === 'error' ? 8000 : 5000;
     
     toast.style.cssText = `
         margin-bottom: 10px;
@@ -2655,33 +1598,6 @@ function showToast(message, type = 'success') {
         }, 300);
     }, duration);
 }
-
-// Add keyframe animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
 
 // ==================== INITIALIZE EVENT LISTENERS ====================
 function initializeEventListeners() {
@@ -2756,7 +1672,6 @@ function initializeEventListeners() {
         });
     }
     
-    // ✅ Missing Ingredients Modal Event Listeners
     if (elements.closeMissingIngredientsModal) {
         elements.closeMissingIngredientsModal.addEventListener('click', closeMissingIngredientsModal);
     }
@@ -2936,17 +1851,13 @@ async function fetchMenuItems() {
         const data = await response.json();
         
         if (data && data.success && Array.isArray(data.data)) {
-            // Store items
             allMenuItems = data.data || [];
             console.log(`✅ ${allMenuItems.length} items loaded from API`);
             
-            // Save to localStorage for offline access
             saveToLocalStorage();
             
-            // Update ALL UI components
             updateAllUIComponents();
             
-            // Reset retry count
             retryCount = 0;
             
             return true;
@@ -2969,54 +1880,9 @@ function saveToLocalStorage() {
     }
 }
 
-// ==================== INVENTORY CACHE ====================
+// ==================== GET INVENTORY CACHE ====================
 async function getInventoryCache() {
-    // Return fallback inventory
     return FALLBACK_INVENTORY_ITEMS;
-}
-
-// ==================== CHECK IF ANY INGREDIENTS IN STOCK ====================
-async function checkIfAnyIngredientsInStock() {
-    for (const ingredient in ingredientInventory) {
-        if (ingredientInventory[ingredient].current > 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-async function updateAddButtonStates() {
-    try {
-        const hasInStock = await checkIfAnyIngredientsInStock();
-        
-        const addNewItemBtn = document.getElementById('addNewItem');
-        const addFirstItemBtn = document.getElementById('addFirstItemBtn');
-        const addFirstMenuBtn = document.getElementById('addFirstMenuBtn');
-        
-        const buttons = [addNewItemBtn, addFirstItemBtn, addFirstMenuBtn].filter(btn => btn !== null);
-        
-        if (hasInStock) {
-            buttons.forEach(btn => {
-                btn.disabled = false;
-                btn.title = 'Click to add a new product';
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-            });
-        } else {
-            buttons.forEach(btn => {
-                btn.disabled = true;
-                btn.title = '⚠️ Cannot add products - All ingredients are out of stock. Please restock inventory.';
-                btn.style.opacity = '0.6';
-                btn.style.cursor = 'not-allowed';
-            });
-        }
-    } catch (error) {
-        console.error('❌ Error updating button states:', error);
-    }
-}
-
-async function checkMenuItemAvailability(itemName) {
-    return await checkIngredientAvailability(itemName);
 }
 
 // ==================== MODAL FUNCTIONS ====================
@@ -3048,7 +1914,6 @@ function openAddModal() {
         if (elements.itemCategory) elements.itemCategory.focus();
     }, 10);
 }
-
 
 async function openEditModal(itemId) {
     if (isModalOpen) return;
@@ -3123,14 +1988,11 @@ function showMissingIngredientsModal(productName, missingIngredients) {
     }
     
     console.log(`🍽️ Displaying missing ingredients modal for: ${productName}`);
-    console.log(`   Missing: ${missingIngredients.join(', ')}`);
     
-    // Set product name
     if (elements.missingProductName) {
         elements.missingProductName.textContent = productName;
     }
     
-    // Populate missing ingredients list
     if (elements.missingIngredientsList) {
         elements.missingIngredientsList.innerHTML = '';
         missingIngredients.forEach(ingredient => {
@@ -3147,7 +2009,6 @@ function showMissingIngredientsModal(productName, missingIngredients) {
         });
     }
     
-    // Show modal with animation
     elements.missingIngredientsModal.style.display = 'flex';
     setTimeout(() => {
         elements.missingIngredientsModal.classList.add('show');
@@ -3248,26 +2109,12 @@ async function handleSaveItem() {
     }
     
     if (!formData.itemId || formData.itemId.trim() === '') {
-        // ✅ OPTIONAL: Check ingredients but don't block (informational only)
         const inventoryItems = FALLBACK_INVENTORY_ITEMS || [];
         
         console.log(`\n🔍 ========== CHECKING INGREDIENTS FOR: ${formData.itemName} ==========`);
-        console.log(`📊 Current Inventory: ${inventoryItems.length} items loaded`);
-        if (inventoryItems.length > 0) {
-            console.log(`Items in inventory: ${inventoryItems.map(i => i.itemName).join(', ')}\n`);
-        } else {
-            console.log(`⚠️ No inventory items available yet\n`);
-        }
         
-        const availabilityCheck = await checkMenuItemAvailability(formData.itemName);
+        const availabilityCheck = await checkIngredientAvailability(formData.itemName);
         
-        console.log(`\n📋 Availability Check Result:`);
-        console.log(`   Available: ${availabilityCheck.available ? '✅' : '⚠️'}`);
-        console.log(`   Required Ingredients: ${availabilityCheck.requiredIngredients.length > 0 ? availabilityCheck.requiredIngredients.join(', ') : 'None'}`);
-        console.log(`   Available: ${availabilityCheck.availableIngredients.length > 0 ? availabilityCheck.availableIngredients.join(', ') : 'None'}`);
-        console.log(`   Missing: ${availabilityCheck.missingIngredients.length > 0 ? availabilityCheck.missingIngredients.join(', ') : 'None'}\n`);
-        
-        // ✅ FIX: Don't BLOCK the save - only WARN
         if (!availabilityCheck.available && availabilityCheck.missingIngredients.length > 0) {
             const warningMsg = `Creating "${formData.itemName}" with missing ingredients: ${availabilityCheck.missingIngredients.join(', ')}. You can restock ingredients later.`;
             
@@ -3283,390 +2130,21 @@ async function handleSaveItem() {
     await saveMenuItem(formData);
 }
 
-// ==================== 🔴 DEDUCT INGREDIENT STOCKS FROM INVENTORY ====================
-async function deductIngredientStocksFromInventory(productName) {
-    try {
-        const recipe = productIngredientMap[productName];
-        
-        if (!recipe || !recipe.ingredients || Object.keys(recipe.ingredients).length === 0) {
-            console.log(`ℹ️ Product "${productName}" has no ingredients to deduct`);
-            return { success: true, deductions: [] };
-        }
-        
-        console.log(`\n🔴 ========== DEDUCTING INGREDIENT STOCKS FOR: ${productName} ==========`);
-        
-        const deductions = [];
-        const createdIngredients = [];
-        
-        // Deduct each ingredient
-        for (const [ingredientKey, quantity] of Object.entries(recipe.ingredients)) {
-            if (quantity <= 0) continue;
-            
-            // Normalize ingredient name
-            const normalizedName = ingredientKey.replace(/_/g, ' ');
-            
-            // Find inventory item with exact match first
-            let inventoryItem = FALLBACK_INVENTORY_ITEMS.find(item => 
-                item.itemName && item.itemName.toLowerCase() === normalizedName.toLowerCase()
-            );
-            
-            // If not found, try fuzzy match (contains partial match)
-            if (!inventoryItem) {
-                inventoryItem = FALLBACK_INVENTORY_ITEMS.find(item => 
-                    item.itemName && 
-                    (item.itemName.toLowerCase().includes(normalizedName.toLowerCase()) ||
-                     normalizedName.toLowerCase().includes(item.itemName.toLowerCase()))
-                );
-            }
-            
-            // If still not found, skip (don't auto-create)
-            if (!inventoryItem) {
-                console.warn(`   ⚠️ Ingredient not found in inventory: ${normalizedName}`);
-                continue;
-            }
-            
-            // ✅ DEDUCT: Reduce stock by quantity
-            const oldStock = parseFloat(inventoryItem.currentStock) || 0;
-            const newStock = Math.max(0, oldStock - quantity);
-            
-            // Update the stock (this modifies the array in-memory)
-            inventoryItem.currentStock = newStock;
-            
-            const isOutOfStock = newStock === 0;
-            const statusEmoji = isOutOfStock ? '🔴 OUT OF STOCK' : '✅ DEDUCTED';
-            
-            console.log(`  ${normalizedName}: ${oldStock} → ${newStock} (deducted: ${quantity} ${inventoryItem.unit}) ${statusEmoji}`);
-            
-            deductions.push({
-                ingredient: normalizedName,
-                oldStock: oldStock,
-                newStock: newStock,
-                quantityDeducted: quantity,
-                unit: inventoryItem.unit || 'unit',
-                isOutOfStock: isOutOfStock
-            });
-        }
-        
-        if (deductions.length > 0) {
-            console.log(`\n✅ PERSISTING DEDUCTIONS:`);
-            
-            // ✅ FIX 1: Save to localStorage IMMEDIATELY using InventoryManager
-            if (typeof inventoryManager !== 'undefined' && inventoryManager) {
-                // Use InventoryManager for primary storage
-                inventoryManager.updateFallbackFromStorage(FALLBACK_INVENTORY_ITEMS);
-                console.log(`   ✅ Applied deductions to FALLBACK_INVENTORY_ITEMS`);
-                inventoryManager.saveToStorage();
-                console.log(`   ✅ Saved to localStorage via InventoryManager`);
-            } else {
-                saveInventoryStockValues();
-                console.log(`   ✅ Saved to localStorage (fallback method)`);
-            }
-            
-            // ✅ FIX 2: Try to save to database
-            try {
-                const response = await fetch('/api/inventory/batch-update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        updates: deductions.map(d => ({
-                            itemName: d.ingredient,
-                            currentStock: d.newStock,
-                            unit: d.unit
-                        })),
-                        productName: productName,
-                        reason: 'Ingredient deduction from menu product'
-                    })
-                });
-                
-                if (response.ok) {
-                    console.log(`   ✅ Saved to database`);
-                } else {
-                    console.warn(`   ⚠️ Database save failed (using localStorage backup)`);
-                }
-            } catch (error) {
-                console.warn(`   ⚠️ Cannot reach database (using localStorage backup):`, error.message);
-            }
-            
-            console.log(`\n📊 Deduction Summary:`);
-            console.log(`   Total ingredients deducted: ${deductions.length}`);
-            console.log(`   Out of stock items: ${deductions.filter(d => d.isOutOfStock).length}`);
-            
-            return { success: true, deductions: deductions };
-        }
-        
-        return { success: true, deductions: [] };
-        
-    } catch (error) {
-        console.error(`❌ Error deducting ingredient stocks:`, error);
-        return { success: false, error: error.message };
-    }
-}
-
-// ==================== VALIDATE INGREDIENTS BEFORE SAVING ====================
-async function validateIngredientsBeforeSave(productName) {
-    try {
-        const recipe = productIngredientMap[productName];
-        
-        if (!recipe || !recipe.ingredients || Object.keys(recipe.ingredients).length === 0) {
-            console.log(`ℹ️ Product "${productName}" has no ingredients to validate`);
-            return { valid: true, missingIngredients: [] };
-        }
-        
-        console.log(`\n🔍 VALIDATING INGREDIENTS FOR: ${productName}`);
-        
-        const missingIngredients = [];
-        const availableIngredients = [];
-        
-        // Check each ingredient
-        for (const [ingredientKey, quantity] of Object.entries(recipe.ingredients)) {
-            if (quantity <= 0) continue;
-            
-            // Normalize ingredient name
-            const normalizedName = ingredientKey.replace(/_/g, ' ');
-            
-            // Check if ingredient exists in inventory
-            let inventoryItem = FALLBACK_INVENTORY_ITEMS.find(item => 
-                item.itemName && item.itemName.toLowerCase() === normalizedName.toLowerCase()
-            );
-            
-            // Try fuzzy match if exact match not found
-            if (!inventoryItem) {
-                inventoryItem = FALLBACK_INVENTORY_ITEMS.find(item => 
-                    item.itemName && 
-                    (item.itemName.toLowerCase().includes(normalizedName.toLowerCase()) ||
-                     normalizedName.toLowerCase().includes(item.itemName.toLowerCase()))
-                );
-            }
-            
-            if (inventoryItem) {
-                console.log(`  ✅ ${normalizedName}: Available (Stock: ${inventoryItem.currentStock} ${inventoryItem.unit})`);
-                availableIngredients.push({
-                    name: normalizedName,
-                    stock: inventoryItem.currentStock,
-                    unit: inventoryItem.unit,
-                    required: quantity
-                });
-            } else {
-                console.log(`  ❌ ${normalizedName}: NOT FOUND in inventory`);
-                missingIngredients.push({
-                    name: normalizedName,
-                    required: quantity,
-                    unit: ingredientKey.includes('oil') || ingredientKey.includes('sauce') ? 'liters' : 'kg'
-                });
-            }
-        }
-        
-        if (missingIngredients.length > 0) {
-            console.warn(`\n⚠️ VALIDATION FAILED: Missing ${missingIngredients.length} ingredients:`);
-            missingIngredients.forEach(ing => {
-                console.warn(`   - ${ing.name} (need: ${ing.required} ${ing.unit})`);
-            });
-            return { valid: false, missingIngredients: missingIngredients };
-        }
-        
-        console.log(`\n✅ VALIDATION PASSED: All ingredients are available`);
-        return { valid: true, missingIngredients: [] };
-        
-    } catch (error) {
-        console.error(`❌ Error validating ingredients:`, error);
-        return { valid: false, error: error.message };
-    }
-}
-
-// ==================== SHOW MISSING INGREDIENTS POPUP ====================
-function showMissingIngredientsModal(productName, missingIngredients) {
-    const modalHTML = `
-        <div class="modal-overlay" id="missingIngredientsModal">
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header" style="background-color: #ff6b6b; color: white;">
-                    <h2>⚠️ Missing Ingredients</h2>
-                    <button class="modal-close" onclick="closeMissingIngredientsModal()">&times;</button>
-                </div>
-                <div class="modal-body" style="padding: 20px;">
-                    <p style="margin-bottom: 15px;">
-                        <strong>Cannot add "${productName}"</strong><br>
-                        The following ingredients are missing from inventory:
-                    </p>
-                    <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
-                        <ul style="margin: 0; padding-left: 20px;">
-                            ${missingIngredients.map(ing => `
-                                <li style="margin: 8px 0;">
-                                    <strong>${ing.name}</strong> (need: ${ing.required} ${ing.unit})
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                    <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
-                        <p style="margin: 0; color: #666;">
-                            <strong>💡 Action Required:</strong><br>
-                            Please restock the missing ingredients in Inventory first, then try adding this product again.
-                        </p>
-                    </div>
-                </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; padding: 15px; border-top: 1px solid #dee2e6;">
-                    <button class="btn btn-secondary" onclick="closeMissingIngredientsModal()">Close</button>
-                    <a href="#" onclick="navigateToInventory(); closeMissingIngredientsModal();" class="btn btn-primary">
-                        Go to Inventory
-                    </a>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Add styles for the modal if not already present
-    if (!document.getElementById('missingIngredientsStyles')) {
-        const style = document.createElement('style');
-        style.id = 'missingIngredientsStyles';
-        style.textContent = `
-            .modal-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-            }
-            
-            .modal-content {
-                background-color: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                max-width: 500px;
-                width: 90%;
-            }
-            
-            .modal-header {
-                padding: 20px;
-                border-radius: 8px 8px 0 0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
-            .modal-header h2 {
-                margin: 0;
-                font-size: 18px;
-            }
-            
-            .modal-close {
-                background: none;
-                border: none;
-                font-size: 24px;
-                cursor: pointer;
-                color: white;
-            }
-            
-            .modal-body {
-                padding: 20px;
-            }
-            
-            .modal-footer {
-                padding: 15px 20px;
-                border-top: 1px solid #dee2e6;
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                border-radius: 0 0 8px 8px;
-            }
-            
-            .btn {
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-                text-decoration: none;
-                display: inline-block;
-            }
-            
-            .btn-primary {
-                background-color: #007bff;
-                color: white;
-            }
-            
-            .btn-primary:hover {
-                background-color: #0056b3;
-            }
-            
-            .btn-secondary {
-                background-color: #6c757d;
-                color: white;
-            }
-            
-            .btn-secondary:hover {
-                background-color: #545b62;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-function closeMissingIngredientsModal() {
-    const modal = document.getElementById('missingIngredientsModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function navigateToInventory() {
-    // Navigate to inventory section
-    if (window.currentSection !== 'inventory') {
-        const inventoryLink = document.querySelector('[onclick*="openSection(\'inventory\')"]');
-        if (inventoryLink) inventoryLink.click();
-    }
-}
-
-// ==================== FIXED: SAVE MENU ITEM WITH AUTO ADD TO SEND STOCK ====================
 async function saveMenuItem(itemData) {
     const isEdit = itemData.itemId && itemData.itemId.trim() !== '';
     
     const saveBtn = elements.saveItemBtn;
     const originalText = saveBtn.textContent;
-    saveBtn.textContent = 'Validating...';
+    saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
     
     try {
-        // ✅ OPTIONAL: Validate ingredients for NEW products (informational, not blocking)
-        if (!isEdit) {
-            console.log(`\n📋 Checking ingredients for new product: ${itemData.itemName}`);
-            const validation = await validateIngredientsBeforeSave(itemData.itemName);
-            
-            // ✅ FIX: Only WARN about missing ingredients, don't BLOCK the save
-            // User can create product without ingredients and add them later
-            if (!validation.valid && validation.missingIngredients && validation.missingIngredients.length > 0) {
-                console.warn(`⚠️ Missing ingredients detected (non-blocking):`);
-                validation.missingIngredients.forEach(ing => {
-                    console.warn(`   - ${ing.name || ing}`);
-                });
-                
-                // Show informational toast - not an error, just info
-                showToast(
-                    `ℹ️ Creating "${itemData.itemName}" with missing ingredients. You can add them later.`,
-                    'info',
-                    3000
-                );
-                
-                console.log(`✅ Proceeding with product creation (ingredients optional)`);
-            } else {
-                console.log(`✅ All required ingredients available or no recipe defined yet`);
-            }
-        }
-        
-        saveBtn.textContent = 'Saving...';
-        
         const payload = {
             name: itemData.itemName,
             itemName: itemData.itemName,
             category: itemData.category,
             unit: itemData.unit,
-            currentStock: isEdit ? Number(itemData.currentStock) : 0,  // ✅ NEW products ALWAYS start at 0
+            currentStock: Number(itemData.currentStock),
             minStock: Number(itemData.minStock),
             maxStock: Number(itemData.maxStock),
             price: Number(itemData.price),
@@ -3712,20 +2190,10 @@ async function saveMenuItem(itemData) {
             await fetchMenuItems();
             updateCategoryCounts();
             
-            // ✅ FIX: Deduct ingredient stocks when adding NEW product (not on edit)
             if (!isEdit) {
-                const deductionResult = await deductIngredientStocksFromInventory(itemData.itemName);
-                if (deductionResult.deductions && deductionResult.deductions.length > 0) {
-                    console.log(`✅ Successfully deducted ingredients for "${itemData.itemName}"`);
-                }
-                
-                console.log(`✅ Product "${itemData.itemName}" created successfully - NOT added to Send Stock yet (quantity = 0)`);
-                console.log(`📝 Admin must manually add stock before it appears in Send Stock table`);
-                
-                showToast(`✅ Product created. Go to Send Stock section to add stock.`, 'success');
+                console.log(`✅ Product "${itemData.itemName}" created successfully`);
             }
             
-            // ✅ FIX: Save inventory stock values to prevent reset
             saveInventoryStockValues();
             
         } else {
@@ -3746,27 +2214,19 @@ async function deleteMenuItem(itemId) {
         return;
     }
     
-    // ✅ FIX: Skip deletion for fallback items (not real MongoDB items)
     if (itemId && itemId.startsWith('fallback_')) {
         console.log(`ℹ️ Item "${itemId}" is a local fallback item, removing from UI only`);
         
         showToast('Local product removed (not saved in database)', 'info');
         
-        // Remove from UI only
         const product = allMenuItems.find(item => item._id === itemId);
-        const productName = product ? (product.name || product.itemName) : null;
         
         allMenuItems = allMenuItems.filter(item => item._id !== itemId);
-        
-        if (productName) {
-            stocksData = stocksData.filter(item => item.name !== productName);
-            saveUniqueItemsToLocalStorage();
-        }
         
         updateAllUIComponents();
         updateCategoryCounts();
         saveInventoryStockValues();
-        return;  // ✅ Don't try to delete from server
+        return;
     }
     
     const deleteBtn = event.target;
@@ -3795,23 +2255,11 @@ async function deleteMenuItem(itemId) {
         if (data.success) {
             showToast('Product deleted successfully!', 'success');
             
-            // Find the product name before deleting
-            const product = allMenuItems.find(item => item._id === itemId);
-            const productName = product ? (product.name || product.itemName) : null;
-            
-            // Remove from allMenuItems
             allMenuItems = allMenuItems.filter(item => item._id !== itemId);
-            
-            // Also remove from stocksData if it exists
-            if (productName) {
-                stocksData = stocksData.filter(item => item.name !== productName);
-                saveUniqueItemsToLocalStorage();
-            }
             
             updateAllUIComponents();
             updateCategoryCounts();
             
-            // ✅ FIX: Save inventory stock values to prevent reset
             saveInventoryStockValues();
         } else {
             throw new Error(data.message);
@@ -3832,8 +2280,6 @@ function updateAllUIComponents() {
         renderDashboardGrid();
     } else if (currentSection === 'menu') {
         renderMenuGrid();
-    } else if (currentSection === 'sendstock') {
-        initializeSendStockUI();
     }
     updateCategoryCounts();
 }
@@ -3937,8 +2383,6 @@ function showSection(section) {
         renderDashboardGrid();
     } else if (section === 'menu') {
         renderMenuGrid();
-    } else if (section === 'sendstock') {
-        initializeSendStockUI();
     }
 }
 
@@ -3964,19 +2408,16 @@ function filterByCategory(category, fullname) {
 }
 
 // ==================== RENDER MENU GRID ====================
-async function canMenuItemBeMade(itemName) {
-    const availability = await checkIngredientAvailability(itemName);
-    return availability.available;
-}
-
 function renderMenuGrid() {
     if (!elements.menuGrid) return;
     
     if (!allMenuItems || !Array.isArray(allMenuItems) || allMenuItems.length === 0) {
         elements.menuGrid.innerHTML = `
             <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
                 <h3>No products found</h3>
                 <p>Add products using the "Add New Product" button</p>
+                <button class="btn btn-primary" onclick="openAddModal()">Add New Product</button>
             </div>
         `;
         return;
@@ -3991,8 +2432,10 @@ function renderMenuGrid() {
     if (filteredItems.length === 0) {
         elements.menuGrid.innerHTML = `
             <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
                 <h3>No products in this category</h3>
                 <p>Add products to this category using the "Add New Product" button</p>
+                <button class="btn btn-primary" onclick="openAddModal()">Add New Product</button>
             </div>
         `;
         return;
@@ -4010,37 +2453,73 @@ function renderMenuGrid() {
         const stockPercentage = maxStock > 0 ? ((currentStock / maxStock) * 100) : 0;
         
         let stockClass = '';
-        if (currentStock === 0) stockClass = 'out-of-stock';
-        else if (currentStock <= minStock) stockClass = 'low-stock';
+        let progressClass = '';
+        if (currentStock === 0) {
+            stockClass = 'out-of-stock';
+            progressClass = 'danger';
+        } else if (currentStock <= minStock) {
+            stockClass = 'low-stock';
+            progressClass = 'warning';
+        }
         
         return `
         <div class="menu-card ${stockClass}">
             <div class="card-header">
                 <h4>${escapeHtml(itemName)}</h4>
                 <div class="card-actions">
-                    <button class="btn-icon" onclick="openEditModal('${item._id}')">Edit</button>
-                    <button class="btn-icon delete" onclick="deleteMenuItem('${item._id}')">Delete</button>
+                    <button class="btn-icon" onclick="openEditModal('${item._id}')" title="Edit product">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteMenuItem('${item._id}')" title="Delete product">🗑️</button>
                 </div>
             </div>
             <div class="card-body">
                 <div class="card-info"><span class="label">Category:</span> ${getCategoryDisplayName(item.category)}</div>
-                <div class="card-info"><span class="label">Current Stock:</span> ${currentStock} ${displayUnit}</div>
                 <div class="card-info"><span class="label">Selling Price:</span> ₱${itemPrice.toFixed(2)}</div>
-                <div class="card-info"><span class="label">Stock Value:</span> ₱${itemValue.toFixed(2)}</div>
-                <div class="card-info"><span class="label">Min Stock:</span> ${minStock} ${displayUnit}</div>
-                <div class="card-info"><span class="label">Max Stock:</span> ${maxStock} ${displayUnit}</div>
-                <div class="card-info">
-                    <span class="label">Stock Level:</span>
+                <div class="card-info"><span class="label">Unit:</span> ${displayUnit}</div>
+                
+                <div style="margin: 12px 0 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span><span class="label">Current Stock:</span> <strong>${currentStock}</strong> ${displayUnit}</span>
+                        <span><span class="label">Max:</span> ${maxStock}</span>
+                    </div>
                     <div class="stock-progress">
-                        <div class="progress-bar" style="width: ${Math.min(stockPercentage, 100)}%"></div>
+                        <div class="progress-bar ${progressClass}" style="width: ${Math.min(stockPercentage, 100)}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px;">
+                        <span class="status-badge ${currentStock === 0 ? 'status-out' : currentStock <= minStock ? 'status-low' : 'status-available'}">
+                            ${currentStock === 0 ? 'Out of Stock' : currentStock <= minStock ? 'Low Stock' : 'In Stock'}
+                        </span>
+                        <span><span class="label">Min:</span> ${minStock} ${displayUnit}</span>
                     </div>
                 </div>
-                <div class="card-info">
-                    <span class="label">Status:</span>
-                    <span class="status ${currentStock === 0 ? 'out-of-stock' : currentStock <= minStock ? 'low-stock' : 'in-stock'}">
-                        ${currentStock === 0 ? 'Out of Stock' : currentStock <= minStock ? 'Low Stock' : 'In Stock'}
-                    </span>
+                
+                <div class="card-info"><span class="label">Stock Value:</span> ₱${itemValue.toFixed(2)}</div>
+            </div>
+            
+            <!-- Quick Add Stock Section - Integrated directly in the product card -->
+            <div class="quick-add-section">
+                <div class="quick-add-title">
+                    <i class="fas fa-plus-circle" style="color: #28a745;"></i>
+                    <span>Add Stock</span>
                 </div>
+                <div class="quick-add-controls">
+                    <input type="number" 
+                           id="addStock-${item._id}" 
+                           class="quick-add-input" 
+                           placeholder="Qty to add"
+                           min="1"
+                           max="${maxStock - currentStock}"
+                           step="1"
+                           value="1">
+                    <button class="quick-add-btn" 
+                            onclick="quickAddStock('${item._id}', '${escapeHtml(itemName).replace(/'/g, "\\'")}')"
+                            ${currentStock >= maxStock ? 'disabled' : ''}>
+                        Add
+                    </button>
+                </div>
+                ${currentStock >= maxStock ? 
+                    '<div style="font-size: 11px; color: #dc3545; margin-top: 5px;">⚠️ Max stock reached</div>' : 
+                    `<div style="font-size: 11px; color: #6c757d; margin-top: 5px;">Can add up to ${maxStock - currentStock} ${displayUnit}</div>`
+                }
             </div>
         </div>
         `;
@@ -4055,8 +2534,10 @@ function renderDashboardGrid() {
     if (!allMenuItems || !Array.isArray(allMenuItems) || allMenuItems.length === 0) {
         elements.dashboardGrid.innerHTML = `
             <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
                 <h3>No products available</h3>
                 <p>Add products to see dashboard data</p>
+                <button class="btn btn-primary" onclick="openAddModal()">Add New Product</button>
             </div>
         `;
         return;
@@ -4073,6 +2554,7 @@ function renderDashboardGrid() {
     if (recentItems.length === 0) {
         elements.dashboardGrid.innerHTML = `
             <div class="empty-state">
+                <div class="empty-state-icon">✅</div>
                 <h3>All products are well stocked!</h3>
                 <p>No low stock items to display</p>
             </div>
@@ -4089,19 +2571,31 @@ function renderDashboardGrid() {
         const unit = item.unit || '';
         const displayUnit = unitDisplayLabels[unit] || unit;
         const itemValue = itemPrice * currentStock;
+        const stockPercentage = maxStock > 0 ? ((currentStock / maxStock) * 100) : 0;
         
         return `
         <div class="menu-card ${currentStock === 0 ? 'out-of-stock' : 'low-stock'}">
             <div class="card-header">
                 <h4>${escapeHtml(itemName)}</h4>
+                <div class="card-actions">
+                    <button class="btn-icon" onclick="openEditModal('${item._id}')" title="Edit product">✏️</button>
+                </div>
             </div>
             <div class="card-body">
-                <div class="card-info"><span class="label">Stock:</span> ${currentStock}/${maxStock} ${displayUnit}</div>
-                <div class="card-info"><span class="label">Value:</span> ₱${itemValue.toFixed(2)}</div>
-                <div class="card-info"><span class="label">Min:</span> ${minStock} ${displayUnit}</div>
+                <div class="card-info"><span class="label">Category:</span> ${getCategoryDisplayName(item.category)}</div>
+                <div style="margin: 8px 0;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><span class="label">Stock:</span> ${currentStock}/${maxStock} ${displayUnit}</span>
+                        <span><span class="label">Value:</span> ₱${itemValue.toFixed(2)}</span>
+                    </div>
+                    <div class="stock-progress">
+                        <div class="progress-bar ${currentStock === 0 ? 'danger' : 'warning'}" style="width: ${Math.min(stockPercentage, 100)}%"></div>
+                    </div>
+                </div>
+                <div class="card-info"><span class="label">Min Stock:</span> ${minStock} ${displayUnit}</div>
                 <div class="card-info">
                     <span class="label">Status:</span>
-                    <span class="status ${currentStock === 0 ? 'out-of-stock' : 'low-stock'}">
+                    <span class="status-badge ${currentStock === 0 ? 'status-out' : 'status-low'}">
                         ${currentStock === 0 ? 'Out of Stock' : 'Low Stock'}
                     </span>
                 </div>
@@ -4113,1006 +2607,9 @@ function renderDashboardGrid() {
     elements.dashboardGrid.innerHTML = gridHTML;
 }
 
-// ==================== LOGOUT ====================
-function handleLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
-    
-    fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-    })
-    .then(() => { window.location.href = '/login'; })
-    .catch(error => {
-        console.error('Logout error:', error);
-        window.location.href = '/login';
-    });
-}
-
-// ==================== 🆕 FIXED: SEND STOCK TO STAFF - WITH REAL INGREDIENT CHECKING ====================
-
-// ==================== INITIALIZE SEND STOCK UI ====================
-async function initializeSendStockUI() {
-    console.log('📦 Initializing Send Stock UI - WITH REAL INGREDIENT CHECKING...');
-    
-    // Reset pagination
-    currentPage = 1;
-    
-    // Always rebuild stocksData from current allMenuItems to reflect any stock changes
-    if (allMenuItems && allMenuItems.length > 0) {
-        console.log('📋 Rebuilding from allMenuItems to get latest stock values...');
-        await buildUniqueStocksData(allMenuItems);
-    } else {
-        // Use fallback
-        await buildUniqueStocksData(FALLBACK_MENU_ITEMS);
-    }
-    
-    // Load permanent stock values
-    const permanentStockValues = loadPermanentStockValues();
-    stocksData.forEach(item => {
-        if (permanentStockValues[item.name] !== undefined) {
-            item.quantity = permanentStockValues[item.name];
-        }
-    });
-    
-    // Save unique items
-    saveUniqueItemsToLocalStorage();
-    savePermanentStockValues();
-    
-    console.log('✅ Final stocksData ready with', stocksData.length, 'UNIQUE items');
-    
-    renderSendStockTable();
-    attachSendStockEventListeners();
-    checkSendStockEmptyState();
-    
-    sendStockUIInitialized = true;
-}
-
-// ==================== BUILD UNIQUE STOCKS DATA ====================
-async function buildUniqueStocksData(items) {
-    console.log('🔨 Building unique stocks data from', items.length, 'items...');
-    
-    const itemMap = new Map();
-    const permanentStockValues = loadPermanentStockValues();
-    
-    items.forEach((item, index) => {
-        const itemName = item.name || item.itemName;
-        if (!itemName) return;
-        
-        if (itemMap.has(itemName)) return;
-        
-        let quantity = parseInt(item.currentStock) || 0;
-        
-        if (permanentStockValues[itemName] !== undefined) {
-            quantity = permanentStockValues[itemName];
-        }
-        
-        // 🆕 FIXED: ONLY add to Send Stock table if:
-        // 1. Product has stock > 0 in admin inventory, OR
-        // 2. Staff has pending request for this product
-        const hasPendingRequest = notifications && notifications.some(n => 
-            n.type === 'stock_request' && 
-            !n.fulfilled &&
-            n.productName === itemName
-        );
-        
-        if (quantity > 0 || hasPendingRequest) {
-            itemMap.set(itemName, {
-                id: itemMap.size + 1,
-                _id: item._id || `item_${Date.now()}_${itemMap.size}`,
-                name: itemName,
-                category: categoryDisplayNames[item.category] || item.category || 'Uncategorized',
-                description: itemName,
-                quantity: quantity,
-                price: parseFloat(item.price) || 0,
-                unit: item.unit || 'piece',
-                minStock: parseInt(item.minStock) || 10,
-                maxStock: parseInt(item.maxStock) || 200
-            });
-        }
-    });
-    
-    stocksData = Array.from(itemMap.values());
-    console.log('✅ Built', stocksData.length, 'items for Send Stock table (quantity > 0 or pending requests)');
-}
-
-// ==================== CHECK EMPTY STATE ====================
-function checkSendStockEmptyState() {
-    const section = document.getElementById('sendstock');
-    if (!section) return;
-    
-    const existingEmptyState = document.getElementById('sendStockEmptyState');
-    const tableContainer = section.querySelector('.table-responsive');
-    const paginationContainer = document.getElementById('paginationContainer');
-    
-    if (!stocksData || stocksData.length === 0) {
-        if (existingEmptyState) {
-            existingEmptyState.style.display = 'block';
-            if (tableContainer) tableContainer.style.display = 'none';
-            if (paginationContainer) paginationContainer.style.display = 'none';
-            return;
-        }
-        
-        const emptyStateDiv = document.createElement('div');
-        emptyStateDiv.id = 'sendStockEmptyState';
-        emptyStateDiv.className = 'empty-state';
-        emptyStateDiv.style.cssText = `
-            text-align: center;
-            padding: 60px 20px;
-            background: white;
-            border-radius: 8px;
-            margin: 20px;
-            border: 1px solid #eee;
-        `;
-        emptyStateDiv.innerHTML = `
-            <div style="font-size: 64px; margin-bottom: 20px;">📦</div>
-            <h3 style="margin-bottom: 10px; color: #333;">No Products Available</h3>
-            <p style="color: #666; margin-bottom: 20px;">Add products to the menu first before sending stock to staff.</p>
-            <button onclick="openAddModal()" class="btn-primary" style="padding: 12px 24px;">
-                <i class="fas fa-plus"></i> Add New Product
-            </button>
-        `;
-        
-        if (tableContainer) {
-            tableContainer.parentNode.insertBefore(emptyStateDiv, tableContainer);
-            tableContainer.style.display = 'none';
-        } else {
-            section.appendChild(emptyStateDiv);
-        }
-        if (paginationContainer) paginationContainer.style.display = 'none';
-    } else {
-        if (existingEmptyState) {
-            existingEmptyState.style.display = 'none';
-        }
-        if (tableContainer) {
-            tableContainer.style.display = 'block';
-        }
-        if (paginationContainer) {
-            paginationContainer.style.display = 'block';
-        }
-    }
-}
-
-// ==================== CHECK PENDING REQUESTS FOR ITEM ====================
-async function hasPendingRequestForItem(itemName) {
-    // In offline mode, always return true to allow sending
-    return true;
-}
-
-// ==================== 🆕 FIXED: RENDER SEND STOCK TABLE - WITH REAL INGREDIENT CHECKING ====================
-async function renderSendStockTable() {
-    const tableBody = document.getElementById('tableBody');
-    if (!tableBody) {
-        console.warn('⚠️ tableBody element not found');
-        return;
-    }
-    
-    // Save quantity values
-    const quantityInputs = tableBody.querySelectorAll('.quantity-input');
-    quantityInputs.forEach(input => {
-        const stockId = input.getAttribute('data-stock-id');
-        lastQuantityValues.set(stockId, input.value);
-    });
-    
-    // Get filter values
-    const searchInput = document.getElementById('searchInput');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    const activeFilter = document.querySelector('.filter-btn.active');
-    let filterValue = 'all';
-    if (activeFilter) {
-        const onclickAttr = activeFilter.getAttribute('onclick');
-        if (onclickAttr) {
-            const match = onclickAttr.match(/'([^']+)'/);
-            if (match) filterValue = match[1];
-        }
-    }
-    
-    // Filter data
-    filteredStocksData = [...stocksData];
-    
-    if (searchTerm) {
-        filteredStocksData = filteredStocksData.filter(item => 
-            item.name.toLowerCase().includes(searchTerm) || 
-            item.category.toLowerCase().includes(searchTerm) ||
-            item.description.toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    if (filterValue !== 'all') {
-        filteredStocksData = filteredStocksData.filter(item => {
-            const itemCategory = item.category.toLowerCase();
-            const filterCategory = filterValue.toLowerCase();
-            return itemCategory.includes(filterCategory) || 
-                   filterCategory.includes(itemCategory) ||
-                   itemCategory === filterCategory;
-        });
-    }
-    
-    // Update pagination
-    totalPages = Math.ceil(filteredStocksData.length / itemsPerPage);
-    if (currentPage > totalPages) currentPage = totalPages || 1;
-    
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, filteredStocksData.length);
-    const paginatedData = filteredStocksData.slice(startIndex, endIndex);
-    
-    // Update counts
-    const totalItemsEl = document.getElementById('totalItems');
-    if (totalItemsEl) totalItemsEl.textContent = filteredStocksData.length;
-    
-    const lastUpdatedEl = document.getElementById('lastUpdated');
-    if (lastUpdatedEl) lastUpdatedEl.textContent = new Date().toLocaleTimeString();
-    
-    // Render rows
-    if (filteredStocksData.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="9" style="text-align: center; padding: 40px;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
-                    <h3 style="margin-bottom: 10px; color: #333;">No items found</h3>
-                    <p style="color: #666;">Try adjusting your search or filter</p>
-                </td>
-            </tr>
-        `;
-    } else {
-        tableBody.innerHTML = '';
-        
-        for (const stock of paginatedData) {
-            const row = document.createElement('tr');
-            
-            // 🆕 FIXED: Check FULL product availability with REAL ingredient inventory
-            const fullAvailability = await checkFullProductAvailability(stock.name);
-            const hasAllIngredients = fullAvailability.available;
-            const missingItems = fullAvailability.missingItems;
-            
-            // Determine status
-            let statusClass = 'status-available';
-            let statusText = 'In Stock';
-            
-            if (stock.quantity <= 0) {
-                statusClass = 'status-out';
-                statusText = 'Out of Stock';
-            } else if (stock.quantity <= stock.minStock) {
-                statusClass = 'status-low';
-                statusText = 'Low Stock';
-            } else if (stock.quantity <= stock.minStock * 2) {
-                statusClass = 'status-medium';
-                statusText = 'Medium Stock';
-            }
-            
-            const formattedPrice = `₱${parseFloat(stock.price).toFixed(2)}`;
-            const savedQuantity = lastQuantityValues.get(stock.id.toString()) || '0';
-            
-            // Check if there are pending requests for this item
-            const hasPendingRequest = notifications.some(n => 
-                n.type === 'stock_request' && 
-                !n.fulfilled &&
-                n.productName === stock.name
-            );
-            
-            // 🆕 FIXED: Determine if send button should be enabled
-            let sendBtnDisabled = true;
-            let sendBtnTitle = '';
-            let sendBtnClass = 'send-stock-btn';
-            let sendBtnIcon = 'fa-paper-plane';
-            let showSendBtn = false;
-            
-            // Only show "Send to Staff" button if there's a pending request
-            if (hasPendingRequest) {
-                showSendBtn = true;
-                if (stock.quantity <= 0) {
-                    sendBtnTitle = '❌ Out of stock in admin inventory - Cannot fulfill';
-                    sendBtnClass += ' btn-danger';
-                    sendBtnDisabled = true;
-                } else if (!hasAllIngredients) {
-                    sendBtnTitle = `❌ Missing: ${missingItems.slice(0, 3).join(', ')}${missingItems.length > 3 ? ` +${missingItems.length - 3} more` : ''} - Cannot fulfill`;
-                    sendBtnClass += ' btn-danger';
-                    sendBtnIcon = 'fa-exclamation-triangle';
-                    sendBtnDisabled = true;
-                } else {
-                    sendBtnDisabled = false;
-                    sendBtnTitle = '✅ All ingredients & stock available! Ready to send';
-                    sendBtnClass += ' btn-success';
-                    sendBtnIcon = 'fa-check-circle';
-                }
-            } else {
-                showSendBtn = false;
-                sendBtnTitle = 'No pending request from staff';
-                sendBtnClass += ' btn-secondary';
-                sendBtnDisabled = true;
-            }
-            
-            // 🆕 FIXED: Get recipe for display
-            const recipe = productIngredientMap[stock.name];
-            let requiredIngredients = [];
-            if (recipe && recipe.ingredients) {
-                requiredIngredients = Object.keys(recipe.ingredients);
-            }
-            
-            // 🆕 FIXED: Ingredient status HTML
-            let ingredientStatusHtml = '';
-            if (requiredIngredients.length > 0) {
-                if (hasAllIngredients) {
-                    ingredientStatusHtml = `
-                        <div style="font-size: 11px; color: #28a745; margin-top: 4px; background: #d4edda; padding: 6px; border-radius: 4px; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-check-circle"></i> 
-                            <span><strong>All ingredients available</strong> (${requiredIngredients.length} items)</span>
-                        </div>
-                    `;
-                } else {
-                    ingredientStatusHtml = `
-                        <div style="font-size: 11px; color: #dc3545; margin-top: 4px; background: #f8d7da; padding: 6px; border-radius: 4px;">
-                            <i class="fas fa-exclamation-circle"></i> 
-                            <strong>Missing:</strong> ${missingItems.slice(0, 3).join(', ')}${missingItems.length > 3 ? ` +${missingItems.length - 3} more` : ''}
-                        </div>
-                    `;
-                }
-            }
-            
-            // Servingware status if needed
-            let servingwareStatusHtml = '';
-            if (recipe && recipe.servingware && servingwareInventory[recipe.servingware]) {
-                const servingware = servingwareInventory[recipe.servingware];
-                if (servingware.current <= 0) {
-                    servingwareStatusHtml = `
-                        <div style="font-size: 11px; color: #dc3545; margin-top: 4px; background: #f8d7da; padding: 6px; border-radius: 4px;">
-                            <i class="fas fa-exclamation-circle"></i> 
-                            <strong>Missing servingware:</strong> ${servingware.name} (out of stock)
-                        </div>
-                    `;
-                }
-            }
-            
-            // Pending request badge
-            const pendingRequestBadge = hasPendingRequest ? 
-                '<span style="display: inline-block; background: #ff9800; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; margin-left: 8px;">📋 Has Request</span>' : '';
-            
-            row.innerHTML = `
-                <td>${stock.id}</td>
-                <td>
-                    <strong>${escapeHtml(stock.name)}</strong>
-                    <span class="permanent-stock-badge">Permanent</span>
-                    ${pendingRequestBadge}
-                </td>
-                <td>${escapeHtml(stock.category)}</td>
-                <td>${escapeHtml(stock.description)}</td>
-                <td>
-                    <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
-                        <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 8px;">
-                            📦 Add Stock to Menu:
-                        </div>
-                        <div class="quantity-controls" style="margin-bottom: 8px;">
-                            <input type="number" 
-                                   class="quantity-input" 
-                                   id="addStock-${stock.id}" 
-                                   placeholder="Amount"
-                                   min="1"
-                                   max="${stock.maxStock}"
-                                   step="1"
-                                   style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
-                            />
-       
-                        </div>
-                        <div style="font-size: 11px; color: #666;">Current: ${stock.quantity}/${stock.maxStock} ${stock.unit}</div>
-                    </div>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                        <strong style="color: #28a745;">Available: ${stock.quantity} ${stock.unit}</strong>
-                        <span style="margin-left: 8px; font-size: 11px; color: #6c757d;">
-                            (Permanent)
-                        </span>
-                    </div>
-                    ${ingredientStatusHtml}
-                    ${servingwareStatusHtml}
-                </td>
-                <td>${formattedPrice}</td>
-                <td>
-                    <span class="status ${statusClass}">${statusText}</span>
-                    ${stock.quantity <= stock.minStock ? 
-                        `<span style="display: block; font-size: 11px; color: #dc3545; margin-top: 4px;">
-                            Min: ${stock.minStock} ${stock.unit}
-                        </span>` : ''}
-                </td>
-                <td>
-                    <div class="staff-stock-info">
-                        <span style="color: #28a745;">✓ Staff needs stock</span>
-                        ${hasPendingRequest ? 
-                            '<span style="display: block; color: #28a745; margin-top: 2px;">📋 Has pending request</span>' : 
-                            '<span style="display: block; color: #6c757d; margin-top: 2px;">⏳ No pending request</span>'}
-                    </div>
-                </td>
-                <td>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">         
-                        <!-- Send to Staff Button -->
-                        ${showSendBtn ? `
-                                              <button class="btn-primary" 
-                                    onclick="quickAddStock('${stock._id}', '${escapeHtml(stock.name)}')"
-                                    style="padding: 8px 12px; white-space: nowrap; margin-left: 8px; font-size: 13px;"
-                            >Add ${stock.unit}</button>
-                        ` : `
-                            <span style="color: #6c757d; font-size: 12px;">Waiting for request...</span>
-                        `}
-                    </div>
-                </td>
-            `;
-            
-            tableBody.appendChild(row);
-        }
-    }
-    
-    // Update pagination
-    updatePagination();
-}
-
-// ==================== ATTACH EVENT LISTENERS ====================
-function attachSendStockEventListeners() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        const newSearchInput = searchInput.cloneNode(true);
-        searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-        
-        newSearchInput.addEventListener('input', function() {
-            currentPage = 1;
-            renderSendStockTable();
-        });
-    }
-}
-
-// ==================== VALIDATE QUANTITY ====================
-function validateQuantity(id, value) {
-    const stock = stocksData.find(item => item.id === id);
-    if (!stock) return;
-    
-    let quantity = parseInt(value) || 0;
-    
-    if (quantity < 0) quantity = 0;
-    if (quantity > stock.quantity) quantity = stock.quantity;
-    
-    const input = document.getElementById(`quantity-${id}`);
-    if (input) {
-        input.value = quantity;
-    }
-    
-    lastQuantityValues.set(id.toString(), quantity.toString());
-    savePersistedQuantities();
-}
-
-// ==================== INCREASE QUANTITY ====================
-function increaseQuantity(id) {
-    const stock = stocksData.find(item => item.id === id);
-    if (!stock) return;
-    
-    const input = document.getElementById(`quantity-${id}`);
-    if (input) {
-        let currentValue = parseInt(input.value) || 0;
-        if (currentValue < stock.quantity) {
-            input.value = currentValue + 1;
-            lastQuantityValues.set(id.toString(), input.value);
-            savePersistedQuantities();
-        }
-    }
-}
-
-// ==================== DECREASE QUANTITY ====================
-function decreaseQuantity(id) {
-    const stock = stocksData.find(item => item.id === id);
-    if (!stock) return;
-    
-    const input = document.getElementById(`quantity-${id}`);
-    if (input) {
-        let currentValue = parseInt(input.value) || 0;
-        if (currentValue > 0) {
-            input.value = currentValue - 1;
-            lastQuantityValues.set(id.toString(), input.value);
-            savePersistedQuantities();
-        }
-    }
-}
-
-// ==================== 🆕 FIXED: MAIN SEND STOCK FUNCTION - WITH REAL INGREDIENT CHECKING ====================
-async function sendStockToStaff(id) {
-    const stock = stocksData.find(item => item.id === id);
-    if (!stock) {
-        alert('Item not found');
-        return;
-    }
-    
-    // 🆕 FIXED: Get the MongoDB _id from allMenuItems
-    const menuItem = allMenuItems.find(m => m.name === stock.name || m.itemName === stock.name);
-    if (!menuItem || !menuItem._id) {
-        console.error(`❌ Menu item not found in database for: ${stock.name}`);
-        showToast(`❌ Product not found in database. Please refresh and try again.`, 'error');
-        return;
-    }
-    
-    // 🆕 FIXED: Check FULL product availability before sending
-    const fullAvailability = await checkFullProductAvailability(stock.name);
-    if (!fullAvailability.available) {
-        const errorMsg = `❌ Cannot send stock! Missing items:\n\n  • ${fullAvailability.missingItems.join('\n  • ')}\n\nPlease restock these items first.`;
-        alert(errorMsg);
-        showToast('❌ Missing required items', 'error');
-        return;
-    }
-    
-    const quantityInput = document.getElementById(`quantity-${id}`);
-    const quantityToSend = quantityInput ? parseInt(quantityInput.value) || 0 : 0;
-    
-    if (quantityToSend <= 0) {
-        alert('Please enter a valid quantity greater than 0');
-        return;
-    }
-    
-    if (quantityToSend > stock.quantity) {
-        alert(`Not enough stock! Available: ${stock.quantity} ${stock.unit}, Requested: ${quantityToSend} ${stock.unit}`);
-        return;
-    }
-    
-    const confirmSend = confirm(`Send ${quantityToSend} ${stock.unit} of "${stock.name}" to staff?\n\nThis will PERMANENTLY DEDUCT ${quantityToSend} ${stock.unit} from ADMIN inventory.\n\n✅ All ingredients are available!\n\nThis change will NEVER reset, even after refreshing the page.`);
-    if (!confirmSend) {
-        return;
-    }
-    
-    const sendBtn = document.getElementById(`sendBtn-${id}`);
-    const originalBtnText = sendBtn.innerHTML;
-    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-    sendBtn.disabled = true;
-    
-    try {
-        console.log('='.repeat(60));
-        console.log(`📦 SENDING STOCK TO STAFF: ${quantityToSend} ${stock.unit} of "${stock.name}"`);
-        console.log(`   MongoDB ID: ${menuItem._id}`);
-        console.log('='.repeat(60));
-        
-        const oldStock = stock.quantity;
-        const newAdminStock = Math.max(0, stock.quantity - quantityToSend);
-        
-        // 🆕 CRITICAL: UPDATE MENU ITEM STOCK IN MONGODB FIRST
-        const mongoUpdateSuccess = await updateMenuItemStockInMongoDB(menuItem._id, newAdminStock);
-        if (!mongoUpdateSuccess) {
-            console.error(`❌ CRITICAL: Failed to update stock in MongoDB`);
-            showToast('❌ Failed to update stock. Please try again.', 'error');
-            sendBtn.innerHTML = originalBtnText;
-            sendBtn.disabled = false;
-            return;
-        }
-        
-        console.log(`✅ MONGODB UPDATED: Menu item "${stock.name}" stock is now ${newAdminStock}`);
-        
-        // Update local stock
-        stock.quantity = newAdminStock;
-        menuItem.currentStock = newAdminStock;
-        console.log(`📊 Stock changed: ${oldStock} → ${newAdminStock} ${stock.unit}`);
-        
-        // Save to permanent storage
-        updatePermanentStockValue(stock.name, newAdminStock);
-        console.log(`✅ PERMANENT stock saved for "${stock.name}": ${newAdminStock}`);
-        
-        if (quantityInput) {
-            quantityInput.value = 0;
-        }
-        
-        lastQuantityValues.delete(id.toString());
-        savePersistedQuantities();
-        savePermanentStockValues();
-        saveUniqueItemsToLocalStorage();
-        
-        // 🆕 FIXED: Emit real-time event to staff
-        await emitStockTransferToStaff(stock, quantityToSend, stock.unit);
-        
-        // Mark any pending requests as fulfilled
-        notifications.forEach(notification => {
-            if (notification.type === 'stock_request' && 
-                notification.productName === stock.name && 
-                !notification.fulfilled) {
-                notification.fulfilled = true;
-                notification.read = true;
-            }
-        });
-        
-        updateNotificationBadge();
-        renderNotifications();
-        saveNotificationsToLocalStorage();
-        
-        console.log('✅ Stock sent successfully! New permanent stock:', newAdminStock);
-        console.log('='.repeat(60));
-        
-        showToast(`✅ Sent ${quantityToSend} ${stock.unit} of "${stock.name}" to staff!`, 'success');
-        
-        addNotification(
-            stock.name,
-            `Sent ${quantityToSend} ${stock.unit} to staff inventory`,
-            'success',
-            'normal',
-            'Admin'
-        );
-        
-        renderSendStockTable();
-        await fetchMenuItems();
-        
-        const verifyStock = loadPermanentStockValues();
-        console.log(`✅ VERIFICATION - ${stock.name} permanent stock is: ${verifyStock[stock.name]}`);
-        
-    } catch (error) {
-        console.error('❌ Error sending stock to staff:', error);
-        showToast(`❌ Error: ${error.message}`, 'error');
-    } finally {
-        sendBtn.innerHTML = originalBtnText;
-        sendBtn.disabled = false;
-    }
-}
-
-// ==================== FILTER TABLE ====================
-function filterTable(filter) {
-    const buttons = document.querySelectorAll('.filter-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    currentPage = 1;
-    renderSendStockTable();
-}
-
-// ==================== SAVE ALL CHANGES ====================
-function saveAllChanges() {
-    showToast('Use the "Send to Staff" button for each item', 'info');
-}
-
-// ==================== SEND STOCK BATCH ====================
-async function sendStockBatch() {
-    showToast('Please send stock individually using the Send button for each item', 'info');
-}
-
-// ==================== RESET ALL QUANTITIES ====================
-function resetAllQuantities() {
-    console.log('🔄 Resetting all quantities...');
-    
-    lastQuantityValues.clear();
-    
-    const quantityInputs = document.querySelectorAll('.quantity-input');
-    quantityInputs.forEach(input => {
-        input.value = '0';
-    });
-    
-    showToast('✅ All quantities have been reset to 0', 'success');
-    console.log('🎉 Reset operation completed successfully');
-}
-
-// ==================== RESET ALL STOCK TO ZERO (DANGER) ====================
-function resetAllStockToZero() {
-    if (!confirm('⚠️ WARNING: This will reset ALL PERMANENT stock values to 0. This cannot be undone. Continue?')) {
-        return;
-    }
-    
-    console.log('🔄 Resetting ALL permanent stock values to 0...');
-    
-    localStorage.removeItem('sendStock_permanentValues');
-    console.log('✅ Cleared permanent stock values from localStorage');
-    
-    stocksData.forEach(item => {
-        item.quantity = 0;
-    });
-    
-    savePermanentStockValues();
-    renderSendStockTable();
-    
-    showToast('✅ All permanent stock values have been reset to 0', 'success');
-    console.log('🎉 Reset operation completed successfully');
-}
-
-// ==================== 🆕 FIXED: MANUAL RESTOCK FUNCTION ====================
-function restockIngredient(ingredientKey, amount) {
-    if (!ingredientInventory[ingredientKey]) {
-        alert(`Ingredient ${ingredientKey} not found`);
-        return;
-    }
-    
-    const ingredient = ingredientInventory[ingredientKey];
-    const oldStock = ingredient.current;
-    const newStock = Math.min(ingredient.max, oldStock + amount);
-    
-    ingredient.current = newStock;
-    
-    console.log(`✅ Restocked ${ingredient.name}: ${oldStock} → ${newStock} ${ingredient.unit}`);
-    showToast(`✅ Restocked ${ingredient.name}: +${amount} ${ingredient.unit}`, 'success');
-    
-    // Save to localStorage
-    localStorage.setItem('ingredientInventory', JSON.stringify(ingredientInventory));
-    
-    // Re-render send stock table to update button states
-    if (currentSection === 'sendstock') {
-        renderSendStockTable();
-    }
-}
-
-function restockServingware(servingwareKey, amount) {
-    if (!servingwareInventory[servingwareKey]) {
-        alert(`Servingware ${servingwareKey} not found`);
-        return;
-    }
-    
-    const servingware = servingwareInventory[servingwareKey];
-    const oldStock = servingware.current;
-    const newStock = Math.min(servingware.max, oldStock + amount);
-    
-    servingware.current = newStock;
-    
-    console.log(`✅ Restocked ${servingware.name}: ${oldStock} → ${newStock} ${servingware.unit}`);
-    showToast(`✅ Restocked ${servingware.name}: +${amount} ${servingware.unit}`, 'success');
-    
-    // Save to localStorage
-    localStorage.setItem('servingwareInventory', JSON.stringify(servingwareInventory));
-    
-    // Re-render send stock table to update button states
-    if (currentSection === 'sendstock') {
-        renderSendStockTable();
-    }
-}
-
-// ==================== 📦 STOCK REQUEST MODAL FUNCTIONS ====================
-function showRequestStockModal(product) {
-    if (!product) {
-        console.error('Cannot show stock request modal: product is null');
-        return;
-    }
-    
-    if (activeStockRequestModals.has(product.name)) {
-        const existingModal = document.getElementById('stockRequestModal');
-        if (existingModal && existingModal.dataset.productName === product.name) {
-            existingModal.style.zIndex = '10001';
-            setTimeout(() => { existingModal.style.zIndex = '10000'; }, 100);
-        }
-        return;
-    }
-    
-    const maxRequestable = (product.maxStock || MAX_STOCK_PER_ITEM) - (product.stock || 0);
-    
-    const modalHTML = `
-        <div id="stockRequestModal" data-product-name="${product.name}" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
-            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h2 style="margin-top: 0; color: #333;">Request Stock</h2>
-                <p style="color: #666; font-size: 16px;">Product: <strong>${product.name}</strong></p>
-                <p style="color: #666; font-size: 14px;">Category: ${product.category}</p>
-                <p style="color: ${product.stock > 0 ? '#28a745' : '#dc3545'}; font-size: 14px;">
-                    Current Stock: ${product.stock || 0}/${product.maxStock || MAX_STOCK_PER_ITEM}
-                </p>
-                <p style="color: #ff9800; font-size: 14px;">
-                    Available Capacity: ${maxRequestable} ${product.unit || ''}
-                </p>
-                
-                <div style="margin: 20px 0;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Quantity Requested:</label>
-                    <input type="number" id="requestQty" min="1" max="${maxRequestable}" value="${Math.min(10, maxRequestable)}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
-                </div>
-                
-                <div style="margin: 20px 0;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Priority Level:</label>
-                    <select id="requestPriority" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="closeStockRequestModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; background: #f0f0f0; color: #333;">Cancel</button>
-                    <button onclick="submitStockRequest('${product._id || product.name}', '${product.name}', '${product.unit || 'pcs'}')" style="padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #4CAF50; color: white;" ${maxRequestable <= 0 ? 'disabled' : ''}>Request Stock</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    const existingModal = document.getElementById('stockRequestModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    activeStockRequestModals.add(product.name);
-    
-    const modal = document.getElementById('stockRequestModal');
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeStockRequestModal();
-        }
-    });
-}
-
-function closeStockRequestModal() {
-    const modal = document.getElementById('stockRequestModal');
-    if (modal) {
-        const productName = modal.dataset.productName;
-        if (productName) {
-            activeStockRequestModals.delete(productName);
-        }
-        modal.remove();
-    }
-}
-
-async function submitStockRequest(productId, productName, unit) {
-    const modal = document.getElementById('stockRequestModal');
-    
-    const quantity = parseInt(document.getElementById('requestQty').value);
-    const priority = document.getElementById('requestPriority').value;
-    
-    if (!quantity || quantity <= 0) {
-        alert('Please enter a valid quantity');
-        return;
-    }
-    
-    // Find the product from allMenuItems
-    const product = allMenuItems.find(p => p.name === productName);
-    const maxRequestable = (product?.maxStock || MAX_STOCK_PER_ITEM) - (product?.stock || 0);
-    
-    if (quantity > maxRequestable) {
-        alert(`Cannot request ${quantity} units. Maximum available capacity is ${maxRequestable} units.`);
-        return;
-    }
-    
-    // Show confirmation dialog
-    const confirmationHTML = `
-        <div id="confirmationDialog" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; align-items: center; justify-content: center;">
-            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h2 style="margin-top: 0; color: #333;">Confirm Stock Request</h2>
-                <p style="color: #666; font-size: 16px; margin: 15px 0;">
-                    Are you sure you want to request <strong>${quantity} ${unit}</strong> of <strong>${productName}</strong>?
-                </p>
-                <p style="color: #666; font-size: 14px; margin: 10px 0;">
-                    Priority: <strong>${priority.charAt(0).toUpperCase() + priority.slice(1)}</strong>
-                </p>
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
-                    <button onclick="cancelConfirmation()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; background: #f0f0f0; color: #333;">Cancel</button>
-                    <button onclick="confirmStockRequest('${productId}', '${productName}', '${unit}', ${quantity}, '${priority}')" style="padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #4CAF50; color: white;">Confirm Request</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', confirmationHTML);
-}
-
-function cancelConfirmation() {
-    const dialog = document.getElementById('confirmationDialog');
-    if (dialog) dialog.remove();
-}
-
-async function confirmStockRequest(productId, productName, unit, quantity, priority) {
-    const dialog = document.getElementById('confirmationDialog');
-    if (dialog) dialog.remove();
-    
-    const confirmBtn = event?.target;
-    if (confirmBtn) {
-        confirmBtn.disabled = true;
-        confirmBtn.style.opacity = '0.6';
-        confirmBtn.style.cursor = 'not-allowed';
-    }
-    
-    try {
-        console.log(`📤 Submitting stock request for ${productName}: ${quantity} ${unit} (${priority} priority)`);
-        
-        const product = allMenuItems.find(p => p.name === productName);
-        const response = await fetch(`${BACKEND_URL}/api/stock-requests`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                productId: productId,
-                productName: productName,
-                requestedQuantity: quantity,
-                unit: unit,
-                priority: priority,
-                requestedBy: 'admin',
-                status: 'pending',
-                maxStockLimit: MAX_STOCK_PER_ITEM,
-                currentStock: product ? product.stock : 0
-            })
-        });
-        
-        const responseData = await response.json();
-        
-        if (response.ok) {
-            // ✅ SUCCESS: Add to pending stock requests
-            if (!pendingStockRequests.includes(productName)) {
-                pendingStockRequests.push(productName);
-                localStorage.setItem('pendingStockRequests', JSON.stringify(pendingStockRequests));
-                localStorage.setItem(`requestTime_${productName}`, Date.now().toString());
-                console.log(`✅ Added ${productName} to pending stock requests`);
-            }
-            
-            stockRequestTimestamps[productName] = Date.now();
-            localStorage.setItem('stockRequestTimestamps', JSON.stringify(stockRequestTimestamps));
-            
-            closeStockRequestModal();
-            
-            // Show success notification
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #4CAF50;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                z-index: 10005;
-                font-weight: bold;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            `;
-            notification.innerHTML = `✅ Stock request submitted for ${productName}!`;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => notification.remove(), 3000);
-            
-        } else if (response.status === 409) {
-            // ❌ CONFLICT: Already pending
-            const hoursOld = responseData.hoursOld ? Math.ceil(responseData.hoursOld) : 'unknown';
-            console.warn(`⚠️ ${productName} has a pending request (${hoursOld} hours old)`);
-            
-            alert(`Stock request for "${productName}" is already pending.\n\nPlease wait for the admin to fulfill the previous request.`);
-            closeStockRequestModal();
-            
-        } else if (response.status === 400) {
-            // ❌ BAD REQUEST
-            console.error(`❌ Invalid request data:`, responseData);
-            alert(`Failed to submit request: ${responseData.message || 'Invalid request data'}`);
-            closeStockRequestModal();
-            
-        } else {
-            // ❌ OTHER ERROR
-            console.error(`❌ Error submitting stock request:`, responseData);
-            alert(`Failed to submit stock request: ${responseData.message || 'Unknown error'}`);
-            closeStockRequestModal();
-        }
-        
-    } catch (error) {
-        console.error('❌ Network error submitting stock request:', error);
-        
-        // ✅ OFFLINE MODE: Add to pending to retry later
-        if (!pendingStockRequests.includes(productName)) {
-            pendingStockRequests.push(productName);
-            localStorage.setItem('pendingStockRequests', JSON.stringify(pendingStockRequests));
-            localStorage.setItem(`requestTime_${productName}`, Date.now().toString());
-            console.log(`⚠️ Offline: Added ${productName} to pending stock requests (will retry)`);
-        }
-        
-        stockRequestTimestamps[productName] = Date.now();
-        localStorage.setItem('stockRequestTimestamps', JSON.stringify(stockRequestTimestamps));
-        
-        closeStockRequestModal();
-        
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff9800;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10005;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        `;
-        notification.innerHTML = `⚠️ Request saved offline. Will retry when connected.`;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => notification.remove(), 5000);
-    }
-}
-
-// ==================== EXPORT PAGINATION FUNCTIONS ====================
-window.changePage = changePage;
-window.changeItemsPerPage = changeItemsPerPage;
-
-// ==================== 🆕 QUICK ADD STOCK FUNCTION ====================
+// ==================== QUICK ADD STOCK FUNCTION ====================
 async function quickAddStock(itemId, itemName) {
-    // Try both possible input IDs (for MongoDB _id and fallback id)
     let inputElement = document.getElementById(`addStock-${itemId}`);
-    if (!inputElement) {
-        // Try with fallback ID format
-        const product = allMenuItems.find(p => p._id === itemId);
-        if (product && product.id) {
-            inputElement = document.getElementById(`addStock-${product.id}`);
-        }
-    }
     
     if (!inputElement) {
         showToast('❌ Input element not found', 'error');
@@ -5150,9 +2647,7 @@ async function quickAddStock(itemId, itemName) {
     
     try {
         console.log(`📦 ADDING STOCK: ${quantityToAdd} ${unit} to "${itemName}"`);
-        console.log(`   Current stock: ${currentStock}, New stock: ${newStock}`);
         
-        // Update MongoDB
         const response = await fetch(`/api/menu/${itemId}`, {
             method: 'PUT',
             headers: {
@@ -5180,31 +2675,22 @@ async function quickAddStock(itemId, itemName) {
         const responseData = await response.json();
         console.log(`✅ MongoDB UPDATED: ${itemName} stock is now ${newStock}`);
         
-        // Update local object
         product.currentStock = newStock;
         
-        // Clear input
-        inputElement.value = '';
+        inputElement.value = '1';
+        inputElement.max = maxStock - newStock;
         
-        // Show success message
         showToast(`✅ Added ${quantityToAdd} ${unit} to "${itemName}" (New: ${newStock} ${unit})`, 'success');
         
-        // Add to notifications
         addNotification(
-            itemName,
-            `Added ${quantityToAdd} ${unit} to inventory (Now: ${newStock} ${unit})`,
+            `Added ${quantityToAdd} ${unit} to "${itemName}"`,
             'success',
-            'normal',
-            'Admin'
+            itemName
         );
         
-        // Refresh menu grid and send stock table
         renderMenuGrid();
-        if (currentSection === 'sendstock') {
-            await initializeSendStockUI();
-        }
+        updateDashboardStats();
         
-        // Fetch updated data from MongoDB
         await fetchMenuItems();
         
         console.log(`✅ Stock added and saved to MongoDB`);
@@ -5215,18 +2701,21 @@ async function quickAddStock(itemId, itemName) {
     }
 }
 
-// ==================== EXPORT NOTIFICATION FUNCTIONS ====================
-window.fulfillStockRequest = fulfillStockRequest;
-window.closeFulfillConfirm = closeFulfillConfirm;
-window.submitFulfillRequest = submitFulfillRequest;
-window.dismissNotification = dismissNotification;
-
-// ==================== EXPORT INGREDIENT FUNCTIONS ====================
-window.restockIngredient = restockIngredient;
-window.restockServingware = restockServingware;
-
-// ==================== EXPORT QUICK STOCK FUNCTION ====================
-window.quickAddStock = quickAddStock;
+// ==================== LOGOUT ====================
+function handleLogout() {
+    if (!confirm('Are you sure you want to logout?')) return;
+    
+    fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+    })
+    .then(() => { window.location.href = '/login'; })
+    .catch(error => {
+        console.error('Logout error:', error);
+        window.location.href = '/login';
+    });
+}
 
 // ==================== GLOBAL EXPORTS ====================
 window.handleLogout = handleLogout;
@@ -5235,26 +2724,10 @@ window.openEditModal = openEditModal;
 window.deleteMenuItem = deleteMenuItem;
 window.toggleNotificationModal = toggleNotificationModal;
 window.clearAllNotifications = clearAllNotifications;
-window.initializeSendStockUI = initializeSendStockUI;
-window.sendStockToStaff = sendStockToStaff;
-window.increaseQuantity = increaseQuantity;
-window.decreaseQuantity = decreaseQuantity;
-window.validateQuantity = validateQuantity;
-window.filterTable = filterTable;
-window.saveAllChanges = saveAllChanges;
-window.sendStockBatch = sendStockBatch;
-window.resetAllQuantities = resetAllQuantities;
-window.resetAllStockToZero = resetAllStockToZero;
+window.dismissNotification = dismissNotification;
+window.quickAddStock = quickAddStock;
 window.ingredientInventory = ingredientInventory;
 window.servingwareInventory = servingwareInventory;
 
-// ==================== EXPORT STOCK REQUEST MODAL FUNCTIONS ====================
-window.showRequestStockModal = showRequestStockModal;
-window.closeStockRequestModal = closeStockRequestModal;
-window.submitStockRequest = submitStockRequest;
-window.confirmStockRequest = confirmStockRequest;
-window.cancelConfirmation = cancelConfirmation;
-
-console.log('✅ Menu Management System loaded with REAL INGREDIENT INVENTORY!');
-console.log('📦 Send Stock now checks actual ingredient inventory!');
-console.log('🚀 Real-time stock transfer events are enabled!');
+console.log('✅ Menu Management System loaded with integrated stock management!');
+console.log('📦 Products appear immediately in Product Menu with quick-add stock controls');

@@ -183,7 +183,7 @@ const validRawIngredients = {
     
     // ==================== SNACKS & SIDES ====================
     'Nacho chips': 'dry',
-    'Lumpia wrapper': 'dry',
+    'Lumpiang wrapper': 'dry',  // Changed from 'Lumpia wrapper' to 'Lumpiang wrapper'
     'French fries': 'dry',
     
     // ==================== PACKAGING ====================
@@ -632,7 +632,7 @@ const recipeMapping = {
         'Cheesy Nachos',
         'Nachos Supreme'
     ],
-    'Lumpia wrapper': [
+    'Lumpiang wrapper': [  // Changed from 'Lumpia wrapper' to 'Lumpiang wrapper'
         'Lumpiang Shanghai',
         'Cheesy Dynamite Lumpia'
     ],
