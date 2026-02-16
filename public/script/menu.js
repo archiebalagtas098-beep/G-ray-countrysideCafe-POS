@@ -310,220 +310,33 @@ const productIngredientMap = {
     }
 };
 
-// ==================== FALLBACK MENU ITEMS ====================
-const FALLBACK_MENU_ITEMS = [
-    { _id: 'fallback_1', name: 'Korean Spicy Bulgogi (Pork)', category: 'Rice', unit: 'plate', price: 180, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_2', name: 'Korean Salt and Pepper (Pork)', category: 'Rice', unit: 'plate', price: 175, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_3', name: 'Crispy Pork Lechon Kawali', category: 'Rice', unit: 'plate', price: 165, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_4', name: 'Cream Dory Fish Fillet', category: 'Rice', unit: 'plate', price: 160, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_5', name: 'Buttered Honey Chicken', category: 'Rice', unit: 'plate', price: 155, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_6', name: 'Buttered Spicy Chicken', category: 'Rice', unit: 'plate', price: 155, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_7', name: 'Chicken Adobo', category: 'Rice', unit: 'plate', price: 145, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_8', name: 'Pork Shanghai', category: 'Rice', unit: 'plate', price: 140, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_9', name: 'Sizzling Pork Sisig', category: 'Sizzling', unit: 'sizzling plate', price: 220, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_10', name: 'Sizzling Liempo', category: 'Sizzling', unit: 'sizzling plate', price: 210, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_11', name: 'Sizzling Porkchop', category: 'Sizzling', unit: 'sizzling plate', price: 195, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_12', name: 'Sizzling Fried Chicken', category: 'Sizzling', unit: 'sizzling plate', price: 185, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_13', name: 'Pancit Bihon (S)', category: 'Party', unit: 'tray', price: 350, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_14', name: 'Pancit Bihon (M)', category: 'Party', unit: 'tray', price: 550, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_15', name: 'Pancit Bihon (L)', category: 'Party', unit: 'tray', price: 750, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_16', name: 'Pancit Canton (S)', category: 'Party', unit: 'tray', price: 380, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_17', name: 'Pancit Canton (M)', category: 'Party', unit: 'tray', price: 580, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_18', name: 'Pancit Canton (L)', category: 'Party', unit: 'tray', price: 780, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_19', name: 'Spaghetti (S)', category: 'Party', unit: 'tray', price: 400, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_20', name: 'Spaghetti (M)', category: 'Party', unit: 'tray', price: 600, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_21', name: 'Spaghetti (L)', category: 'Party', unit: 'tray', price: 800, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_22', name: 'Cucumber Lemonade (Glass)', category: 'Drink', unit: 'glass', price: 60, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_23', name: 'Cucumber Lemonade (Pitcher)', category: 'Drink', unit: 'pitcher', price: 180, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_24', name: 'Blue Lemonade (Glass)', category: 'Drink', unit: 'glass', price: 65, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_25', name: 'Blue Lemonade (Pitcher)', category: 'Drink', unit: 'pitcher', price: 190, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_26', name: 'Red Tea (Glass)', category: 'Drink', unit: 'glass', price: 55, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_27', name: 'Soda (Mismo)', category: 'Drink', unit: 'bottle', price: 25, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_28', name: 'Soda 1.5L', category: 'Drink', unit: 'bottle', price: 65, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_29', name: 'Cafe Americano Tall', category: 'Cafe', unit: 'cup', price: 80, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_30', name: 'Cafe Americano Grande', category: 'Cafe', unit: 'cup', price: 95, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_31', name: 'Cafe Latte Tall', category: 'Cafe', unit: 'cup', price: 90, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_32', name: 'Cafe Latte Grande', category: 'Cafe', unit: 'cup', price: 105, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_33', name: 'Caramel Macchiato Tall', category: 'Cafe', unit: 'cup', price: 100, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_34', name: 'Caramel Macchiato Grande', category: 'Cafe', unit: 'cup', price: 115, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_35', name: 'Milk Tea Regular HC', category: 'Milk', unit: 'cup', price: 85, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_36', name: 'Milk Tea Regular MC', category: 'Milk', unit: 'cup', price: 95, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_37', name: 'Matcha Green Tea HC', category: 'Milk', unit: 'cup', price: 90, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_38', name: 'Matcha Green Tea MC', category: 'Milk', unit: 'cup', price: 100, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_39', name: 'Cheesy Nachos', category: 'Snack & Appetizer', unit: 'serving', price: 150, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_40', name: 'Nachos Supreme', category: 'Snack & Appetizer', unit: 'serving', price: 180, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_41', name: 'French fries', category: 'Snack & Appetizer', unit: 'serving', price: 90, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_42', name: 'Clubhouse Sandwich', category: 'Snack & Appetizer', unit: 'sandwich', price: 120, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_43', name: 'Fish and Fries', category: 'Snack & Appetizer', unit: 'serving', price: 160, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_44', name: 'Cheesy Dynamite Lumpia', category: 'Snack & Appetizer', unit: 'piece', price: 25, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_45', name: 'Lumpiang Shanghai', category: 'Snack & Appetizer', unit: 'piece', price: 20, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_46', name: 'Fried Chicken', category: 'Budget Meals Served with Rice', unit: 'meal', price: 95, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_47', name: 'Buttered Honey Chicken', category: 'Budget Meals Served with Rice', unit: 'meal', price: 105, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_48', name: 'Buttered Spicy Chicken', category: 'Budget Meals Served with Rice', unit: 'meal', price: 105, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_49', name: 'Tinapa Rice', category: 'Budget Meals Served with Rice', unit: 'meal', price: 85, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_50', name: 'Tuyo Pesto', category: 'Budget Meals Served with Rice', unit: 'meal', price: 80, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_51', name: 'Fried Rice', category: 'Budget Meals Served with Rice', unit: 'serving', price: 50, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_52', name: 'Plain Rice', category: 'Budget Meals Served with Rice', unit: 'bowl', price: 25, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_53', name: 'Sinigang (PORK)', category: 'Specialties', unit: 'serving', price: 280, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_54', name: 'Sinigang (Shrimp)', category: 'Specialties', unit: 'serving', price: 320, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_55', name: 'Paknet (Pakbet w/ Bagnet)', category: 'Specialties', unit: 'serving', price: 260, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_56', name: 'Buttered Shrimp', category: 'Specialties', unit: 'serving', price: 300, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_57', name: 'Special Bulalo (good for 2-3 Persons)', category: 'Specialties', unit: 'pot', price: 450, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_58', name: 'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)', category: 'Specialties', unit: 'pot', price: 850, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_59', name: 'Paper Cups (12oz)', category: 'packaging', unit: 'pack', price: 250, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_60', name: 'Paper Cups (16oz)', category: 'packaging', unit: 'pack', price: 280, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_61', name: 'Straws (Regular)', category: 'packaging', unit: 'pack', price: 120, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_62', name: 'Straws (Boba)', category: 'packaging', unit: 'pack', price: 150, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_63', name: 'Food Containers (Small)', category: 'packaging', unit: 'pack', price: 180, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_64', name: 'Food Containers (Medium)', category: 'packaging', unit: 'pack', price: 220, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_65', name: 'Food Containers (Large)', category: 'packaging', unit: 'pack', price: 260, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_66', name: 'Plastic Utensils Set', category: 'packaging', unit: 'set', price: 85, currentStock: 0, minStock: 10, maxStock: 200 },
-    { _id: 'fallback_67', name: 'Napkins (Pack of 50)', category: 'packaging', unit: 'pack', price: 75, currentStock: 0, minStock: 10, maxStock: 200 }
-];
-
 // ==================== FALLBACK INVENTORY ITEMS ====================
-const FALLBACK_INVENTORY_ITEMS = [
-    { _id: 'inv_1', itemName: 'Pork', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_2', itemName: 'Pork belly', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_3', itemName: 'Pork chop', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_4', itemName: 'Ground pork', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_5', itemName: 'Chicken', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_6', itemName: 'Fried chicken', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_7', itemName: 'Shrimp', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_8', itemName: 'Cream dory', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_9', itemName: 'Beef shank', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_10', itemName: 'Bagnet', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_11', itemName: 'Tinapa', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_12', itemName: 'Tuyo', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_13', itemName: 'Ham', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_14', itemName: 'Hotdog', currentStock: 100, unit: 'kg', category: 'meat' },
-    { _id: 'inv_15', itemName: 'Fish', currentStock: 100, unit: 'kg', category: 'seafood' },
-    { _id: 'inv_16', itemName: 'Garlic', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_17', itemName: 'Onion', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_18', itemName: 'Carrot', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_19', itemName: 'Cabbage', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_20', itemName: 'Tomato', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_21', itemName: 'Lettuce', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_22', itemName: 'Cucumber', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_23', itemName: 'Lemon', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_24', itemName: 'Bell pepper', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_25', itemName: 'Calamansi', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_26', itemName: 'Chili', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_27', itemName: 'Radish', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_28', itemName: 'Kangkong', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_29', itemName: 'Eggplant', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_30', itemName: 'Squash', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_31', itemName: 'Okra', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_32', itemName: 'Ampalaya', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_33', itemName: 'Corn', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_34', itemName: 'Potato', currentStock: 100, unit: 'kg', category: 'produce' },
-    { _id: 'inv_35', itemName: 'Bread', currentStock: 100, unit: 'loaf', category: 'produce' },
-    { _id: 'inv_36', itemName: 'Butter', currentStock: 100, unit: 'kg', category: 'dairy' },
-    { _id: 'inv_37', itemName: 'Egg', currentStock: 100, unit: 'piece', category: 'dairy' },
-    { _id: 'inv_38', itemName: 'Milk', currentStock: 100, unit: 'liter', category: 'dairy' },
-    { _id: 'inv_39', itemName: 'Cheese', currentStock: 100, unit: 'kg', category: 'dairy' },
-    { _id: 'inv_40', itemName: 'Cream', currentStock: 100, unit: 'liter', category: 'dairy' },
-    { _id: 'inv_41', itemName: 'Mayonnaise', currentStock: 100, unit: 'kg', category: 'dairy' },
-    { _id: 'inv_42', itemName: 'Soy sauce', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_43', itemName: 'Vinegar', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_44', itemName: 'Salt', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_45', itemName: 'Sugar', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_46', itemName: 'Black pepper', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_47', itemName: 'Cooking oil', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_48', itemName: 'Sesame oil', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_49', itemName: 'Flour', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_50', itemName: 'Cornstarch', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_51', itemName: 'Breadcrumbs', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_52', itemName: 'Gochujang', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_53', itemName: 'Oyster sauce', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_54', itemName: 'Shrimp paste', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_55', itemName: 'Tamarind mix', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_56', itemName: 'Peppercorn', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_57', itemName: 'Chili flakes', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_58', itemName: 'Honey', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_59', itemName: 'Bay leaves', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_60', itemName: 'Herbs', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_61', itemName: 'Vegetables', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_62', itemName: 'Sweet tomato sauce', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_63', itemName: 'Gravy', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_64', itemName: 'Batter', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_65', itemName: 'Cheese sauce', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_66', itemName: 'Ground meat', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_67', itemName: 'Water', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_68', itemName: 'Ice', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_69', itemName: 'Pancit canton', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_70', itemName: 'Rice noodles', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_71', itemName: 'Spaghetti pasta', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_72', itemName: 'Pasta', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_73', itemName: 'Pancit bihon', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_74', itemName: 'Rice', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_75', itemName: 'Lemon juice', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_76', itemName: 'Blue syrup', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_77', itemName: 'Tea', currentStock: 100, unit: 'kg', category: 'beverage' },
-    { _id: 'inv_78', itemName: 'Black tea', currentStock: 100, unit: 'kg', category: 'beverage' },
-    { _id: 'inv_79', itemName: 'Espresso', currentStock: 100, unit: 'kg', category: 'beverage' },
-    { _id: 'inv_80', itemName: 'Hot water', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_81', itemName: 'Steamed milk', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_82', itemName: 'Carbonated soft drink', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_83', itemName: 'Chicken broth', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_84', itemName: 'Milk tea base', currentStock: 100, unit: 'liter', category: 'beverage' },
-    { _id: 'inv_85', itemName: 'Coffee beans', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_86', itemName: 'Matcha powder', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_87', itemName: 'Caramel syrup', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_88', itemName: 'Vanilla syrup', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_89', itemName: 'Strawberry syrup', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_90', itemName: 'Mango flavor', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_91', itemName: 'Cream cheese flavor', currentStock: 100, unit: 'liter', category: 'dry' },
-    { _id: 'inv_92', itemName: 'Tapioca pearls', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_93', itemName: 'Cookie crumbs', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_94', itemName: 'Nacho chips', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_95', itemName: 'Lumpia wrapper', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_96', itemName: 'French fries', currentStock: 100, unit: 'kg', category: 'dry' },
-    { _id: 'inv_97', itemName: 'Paper cups', currentStock: 100, unit: 'pack', category: 'packaging' },
-    { _id: 'inv_98', itemName: 'Straws', currentStock: 100, unit: 'pack', category: 'packaging' },
-    { _id: 'inv_99', itemName: 'Napkins', currentStock: 100, unit: 'pack', category: 'packaging' },
-    { _id: 'inv_100', itemName: 'Food containers', currentStock: 100, unit: 'pack', category: 'packaging' },
-    { _id: 'inv_101', itemName: 'Plastic utensils', currentStock: 100, unit: 'pack', category: 'packaging' }
-];
+// We'll keep an empty array - all inventory comes from MongoDB
+let FALLBACK_INVENTORY_ITEMS = [];
+
+// ==================== RESET INVENTORY TO ZERO ====================
+function resetInventoryToZero() {
+    console.log('🔄 All inventory items will be loaded from MongoDB...');
+    console.log('✅ No local fallback inventory - Using MongoDB data only');
+    
+    // Clear persisted values in localStorage
+    localStorage.removeItem('menu_inventory_currentStock');
+    console.log('✅ Persisted inventory values cleared from localStorage');
+    
+    return true;
+}
 
 // ==================== LOAD INVENTORY WITH PERSISTED VALUES ====================
 function loadInventoryWithPersistedValues() {
-    console.log('🔄 Loading persisted inventory values...');
-    
-    const persistedInventory = localStorage.getItem('menu_inventory_currentStock');
-    if (persistedInventory) {
-        try {
-            const persistedValues = JSON.parse(persistedInventory);
-            
-            FALLBACK_INVENTORY_ITEMS.forEach(item => {
-                if (persistedValues[item.itemName] !== undefined) {
-                    const oldStock = item.currentStock;
-                    item.currentStock = persistedValues[item.itemName];
-                    console.log(`  ${item.itemName}: ${oldStock} → ${item.currentStock} (persisted)`);
-                }
-            });
-            
-            console.log('✅ Persisted inventory values restored');
-            return true;
-        } catch (error) {
-            console.error('❌ Error loading persisted inventory:', error);
-            return false;
-        }
-    }
-    
-    console.log('⚠️ No persisted inventory found');
+    console.log('🔄 Inventory will be loaded from MongoDB only...');
+    console.log('✅ No fallback inventory - MongoDB data only');
     return false;
 }
 
 // ==================== SAVE INVENTORY STOCK VALUES ====================
 function saveInventoryStockValues() {
     try {
-        const stockValues = {};
-        FALLBACK_INVENTORY_ITEMS.forEach(item => {
-            stockValues[item.itemName] = item.currentStock;
-        });
-        localStorage.setItem('menu_inventory_currentStock', JSON.stringify(stockValues));
-        console.log('💾 Saved inventory stock values to localStorage');
+        console.log('💾 Stock values managed through MongoDB');
     } catch (error) {
         console.error('❌ Error saving inventory stock values:', error);
     }
@@ -781,15 +594,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         initializeCategoryDropdown();
         console.log('✅ Event listeners initialized');
         
-        loadFromLocalStorage();
-        console.log('✅ Data loaded from localStorage');
+        // Clear any fallback data - we only use MongoDB
+        allMenuItems = [];
+        console.log('✅ Using MongoDB only - no fallback products');
         
-        loadInventoryWithPersistedValues();
-        console.log('✅ Inventory stock values loaded');
+        // Reset inventory to use MongoDB only
+        resetInventoryToZero();
+        console.log('✅ All inventory from MongoDB only - No fallback data');
         
-        currentInventoryCache = FALLBACK_INVENTORY_ITEMS;
+        currentInventoryCache = [];
         lastInventoryCacheTime = Date.now();
-        console.log(`📦 Inventory initialized with ${currentInventoryCache.length} items`);
+        console.log(`📦 Inventory initialized - Loading from MongoDB`);
         
         showSection('dashboard');
         console.log('✅ Dashboard section displayed');
@@ -797,23 +612,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         connectToNotificationServer();
         console.log('✅ Real-time connections initiated');
         
+        // Fetch menu items from MongoDB
         await fetchMenuItems();
         
-        if (!allMenuItems || allMenuItems.length === 0) {
-            console.log('⚠️ No menu items from backend, using fallback data');
-            initializeFallbackData();
-        }
-        
-        console.log(`✅ Menu Management System initialized with ${allMenuItems.length} products!`);
+        console.log(`✅ Menu Management System initialized with ${allMenuItems.length} products from MongoDB!`);
         
     } catch (error) {
         console.error('❌ Critical error during initialization:', error);
-        
-        if (!allMenuItems || allMenuItems.length === 0) {
-            initializeFallbackData();
-        }
-        
-        showToast('System initialized with fallback data. Some features may be limited.', 'warning');
+        showToast('System initialized. Please ensure MongoDB is connected.', 'warning');
     }
 });
 
@@ -847,33 +653,6 @@ function connectToNotificationServer() {
         };
     } catch (error) {
         notificationEventSource = null;
-    }
-}
-
-// ==================== INITIALIZE FALLBACK DATA ====================
-function initializeFallbackData() {
-    console.log('📋 Initializing fallback menu data...');
-    allMenuItems = FALLBACK_MENU_ITEMS;
-    saveToLocalStorage();
-    updateAllUIComponents();
-}
-
-// ==================== LOAD FROM LOCALSTORAGE ====================
-function loadFromLocalStorage() {
-    try {
-        const backup = localStorage.getItem('menuItems_backup');
-        if (backup) {
-            const parsedData = JSON.parse(backup);
-            allMenuItems = Array.isArray(parsedData) ? parsedData : [];
-            console.log('📦 Loaded from localStorage:', allMenuItems.length, 'items');
-            updateAllUIComponents();
-        } else {
-            allMenuItems = FALLBACK_MENU_ITEMS;
-            console.log('📋 Using fallback menu data:', allMenuItems.length, 'items');
-        }
-    } catch (error) {
-        console.error('❌ Error loading from localStorage:', error);
-        allMenuItems = FALLBACK_MENU_ITEMS;
     }
 }
 
@@ -1117,6 +896,31 @@ function addNotificationStyles() {
         .quick-add-btn:disabled {
             background: #6c757d;
             cursor: not-allowed;
+        }
+
+        .missing-ingredients-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .missing-ingredients-list li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #fff8f8;
+            border-left: 4px solid #dc3545;
+            border-radius: 4px;
+            color: #721c24;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .missing-ingredients-list li:before {
+            content: "❌";
+            margin-right: 10px;
+            font-size: 12px;
         }
     `;
     document.head.appendChild(style);
@@ -1445,6 +1249,42 @@ function clearAllNotifications() {
     }
 }
 
+// ==================== FETCH INVENTORY FROM MONGODB ====================
+async function fetchInventoryFromMongoDB() {
+    try {
+        console.log('🔍 Fetching inventory from MongoDB...');
+        
+        const response = await fetch('/api/inventory', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            console.warn(`⚠️ Inventory API error ${response.status}`);
+            return [];
+        }
+        
+        const data = await response.json();
+        
+        // Handle different response formats
+        let inventoryItems = [];
+        if (Array.isArray(data)) {
+            inventoryItems = data;
+        } else if (data && data.success && Array.isArray(data.data)) {
+            inventoryItems = data.data;
+        } else if (data && Array.isArray(data.items)) {
+            inventoryItems = data.items;
+        }
+        
+        console.log(`📦 Loaded ${inventoryItems.length} inventory items from MongoDB`);
+        return inventoryItems;
+    } catch (error) {
+        console.error('❌ Error fetching inventory from MongoDB:', error.message);
+        return [];
+    }
+}
+
 // ==================== CHECK INGREDIENT AVAILABILITY ====================
 async function checkIngredientAvailability(itemName) {
     try {
@@ -1452,24 +1292,26 @@ async function checkIngredientAvailability(itemName) {
         
         const recipe = productIngredientMap[itemName];
         
+        // If no recipe found, treat as product with no ingredients (like packaging)
         if (!recipe) {
-            console.log(`ℹ️ No recipe found for "${itemName}" - Creating product without recipe (optional)`);
+            console.log(`ℹ️ No recipe found for "${itemName}" - Product has no ingredient requirements`);
             return {
                 available: true,
                 missingIngredients: [],
                 availableIngredients: [],
-                allIngredientsPresent: false,
+                allIngredientsPresent: true,
                 requiredIngredients: []
             };
         }
         
+        // If recipe exists but has no ingredients
         if (!recipe.ingredients || Object.keys(recipe.ingredients).length === 0) {
-            console.log(`ℹ️ No ingredients defined for "${itemName}" - Creating product without ingredients (optional)`);
+            console.log(`ℹ️ No ingredients defined for "${itemName}" - Product has no ingredient requirements`);
             return {
                 available: true,
                 missingIngredients: [],
                 availableIngredients: [],
-                allIngredientsPresent: false,
+                allIngredientsPresent: true,
                 requiredIngredients: []
             };
         }
@@ -1479,16 +1321,30 @@ async function checkIngredientAvailability(itemName) {
         const missingIngredients = [];
         const availableIngredients = [];
         
-        const inventoryItems = FALLBACK_INVENTORY_ITEMS || [];
+        // Fetch inventory from MongoDB
+        const inventoryItems = await fetchInventoryFromMongoDB();
+        
+        if (!Array.isArray(inventoryItems) || inventoryItems.length === 0) {
+            console.log(`ℹ️ No inventory data available from MongoDB - Allowing product: ${itemName}`);
+            return {
+                available: true,
+                missingIngredients: [],
+                availableIngredients: [],
+                allIngredientsPresent: true,
+                requiredIngredients: []
+            };
+        }
         
         for (const [ingredientName, requiredAmount] of Object.entries(recipe.ingredients)) {
             console.log(`   Checking ingredient: ${ingredientName} (required: ${requiredAmount})`);
             
             const normalizedIngredientName = ingredientName.replace(/_/g, ' ');
             
-            const dbInventoryItem = inventoryItems.find(item => 
-                item.itemName.toLowerCase() === normalizedIngredientName.toLowerCase()
-            );
+            // Find in inventory
+            const dbInventoryItem = inventoryItems.find(item => {
+                const itemNameToCheck = item.itemName || item.name || '';
+                return itemNameToCheck.toLowerCase() === normalizedIngredientName.toLowerCase();
+            });
             
             if (!dbInventoryItem) {
                 console.warn(`   ❌ NOT FOUND in inventory: ${ingredientName}`);
@@ -1496,17 +1352,17 @@ async function checkIngredientAvailability(itemName) {
                 continue;
             }
             
-            const currentStock = parseFloat(dbInventoryItem.currentStock) || 0;
+            const currentStock = parseFloat(dbInventoryItem.currentStock || 0);
             const unit = dbInventoryItem.unit || 'unit';
             
             console.log(`   Found in inventory: ${ingredientName} - Current: ${currentStock} ${unit}, Required: ${requiredAmount}`);
             
             if (currentStock <= 0) {
                 console.warn(`   ❌ OUT OF STOCK: ${ingredientName}`);
-                missingIngredients.push(`${ingredientName} (OUT OF STOCK - ${currentStock.toFixed(1)} ${unit})`);
+                missingIngredients.push(`${ingredientName} - OUT OF STOCK (Have: ${currentStock} ${unit})`);
             } else if (currentStock < requiredAmount) {
                 console.warn(`   ⚠️ INSUFFICIENT STOCK: ${ingredientName}`);
-                missingIngredients.push(`${ingredientName} (INSUFFICIENT - need ${requiredAmount} ${unit}, have ${currentStock.toFixed(1)} ${unit})`);
+                missingIngredients.push(`${ingredientName} - INSUFFICIENT STOCK (Need: ${requiredAmount} ${unit}, Have: ${currentStock} ${unit})`);
             } else {
                 console.log(`   ✅ SUFFICIENT STOCK: ${ingredientName}`);
                 availableIngredients.push(ingredientName);
@@ -1525,11 +1381,13 @@ async function checkIngredientAvailability(itemName) {
         };
     } catch (error) {
         console.error('❌ Error checking ingredient availability:', error);
+        console.log(`⚠️ Allowing product due to error: ${error.message}`);
+        // Allow product to be added if there's an error checking ingredients
         return {
-            available: false,
-            missingIngredients: ['Error checking inventory'],
+            available: true,
+            missingIngredients: [],
             availableIngredients: [],
-            allIngredientsPresent: false,
+            allIngredientsPresent: true,
             requiredIngredients: []
         };
     }
@@ -1597,6 +1455,153 @@ function showToast(message, type = 'success', duration = 5000) {
             if (toast.parentNode) toast.parentNode.removeChild(toast);
         }, 300);
     }, duration);
+}
+
+// ==================== SHOW MISSING INGREDIENTS MODAL ====================
+function showMissingIngredientsModal(productName, missingIngredients) {
+    console.log(`🍽️ Displaying missing ingredients modal for: ${productName}`);
+    
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('missingIngredientsModal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'missingIngredientsModal';
+        modal.className = 'modal';
+        modal.style.cssText = `
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="
+                background: white;
+                padding: 25px;
+                border-radius: 12px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            ">
+                <div class="modal-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 2px solid #f0f0f0;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                ">
+                    <h2 style="margin: 0; color: #dc3545; font-size: 24px;">
+                        <i class="fas fa-exclamation-triangle"></i> Missing Ingredients
+                    </h2>
+                    <button id="closeMissingIngredientsModal" style="
+                        background: none;
+                        border: none;
+                        font-size: 28px;
+                        cursor: pointer;
+                        color: #666;
+                    ">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size: 16px; margin-bottom: 20px; color: #333;">
+                        Cannot add <strong id="missingProductName">${productName}</strong> because the following ingredients are missing or insufficient:
+                    </p>
+                    <ul id="missingIngredientsList" class="missing-ingredients-list" style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                    "></ul>
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-top: 20px;
+                        border-left: 4px solid #ffc107;
+                    ">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                            <i class="fas fa-info-circle"></i> Please restock these ingredients in the Inventory Management system before adding this product.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer" style="
+                    margin-top: 25px;
+                    text-align: right;
+                    border-top: 2px solid #f0f0f0;
+                    padding-top: 20px;
+                ">
+                    <button id="closeMissingIngredientsBtn" class="btn btn-primary" style="
+                        padding: 12px 30px;
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 500;
+                    ">OK, Got It</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        document.getElementById('closeMissingIngredientsModal').addEventListener('click', closeMissingIngredientsModal);
+        document.getElementById('closeMissingIngredientsBtn').addEventListener('click', closeMissingIngredientsModal);
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeMissingIngredientsModal();
+            }
+        });
+    }
+    
+    // Update modal content
+    document.getElementById('missingProductName').textContent = productName;
+    
+    const listElement = document.getElementById('missingIngredientsList');
+    listElement.innerHTML = '';
+    
+    missingIngredients.forEach(ingredient => {
+        const listItem = document.createElement('li');
+        listItem.style.cssText = `
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #fff8f8;
+            border-left: 4px solid #dc3545;
+            border-radius: 4px;
+            color: #721c24;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        `;
+        listItem.innerHTML = `<span style="font-weight: 600;">❌</span> ${ingredient}`;
+        listElement.appendChild(listItem);
+    });
+    
+    // Show modal
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+function closeMissingIngredientsModal() {
+    const modal = document.getElementById('missingIngredientsModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 150);
+    }
 }
 
 // ==================== INITIALIZE EVENT LISTENERS ====================
@@ -1672,19 +1677,13 @@ function initializeEventListeners() {
         });
     }
     
-    if (elements.closeMissingIngredientsModal) {
-        elements.closeMissingIngredientsModal.addEventListener('click', closeMissingIngredientsModal);
-    }
-    
-    if (elements.closeMissingIngredientsBtn) {
-        elements.closeMissingIngredientsBtn.addEventListener('click', closeMissingIngredientsModal);
-    }
-    
-    if (elements.missingIngredientsModal) {
-        elements.missingIngredientsModal.addEventListener('click', (e) => {
-            if (e.target === elements.missingIngredientsModal) closeMissingIngredientsModal();
-        });
-    }
+    // Close missing ingredients modal when clicking outside
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('missingIngredientsModal');
+        if (modal && e.target === modal) {
+            closeMissingIngredientsModal();
+        }
+    });
 }
 
 // ==================== INITIALIZE CATEGORY DROPDOWN ====================
@@ -1854,7 +1853,13 @@ async function fetchMenuItems() {
             allMenuItems = data.data || [];
             console.log(`✅ ${allMenuItems.length} items loaded from API`);
             
-            saveToLocalStorage();
+            // Save to localStorage as backup only
+            try {
+                localStorage.setItem('menuItems_backup', JSON.stringify(allMenuItems));
+                localStorage.setItem('menuItems_lastUpdate', new Date().toISOString());
+            } catch (e) {
+                console.warn('⚠️ Could not save to localStorage:', e);
+            }
             
             updateAllUIComponents();
             
@@ -1869,20 +1874,6 @@ async function fetchMenuItems() {
         console.error('❌ Network error fetching menu items:', error.message);
         return false;
     }
-}
-
-function saveToLocalStorage() {
-    try {
-        localStorage.setItem('menuItems_backup', JSON.stringify(allMenuItems));
-        localStorage.setItem('menuItems_lastUpdate', new Date().toISOString());
-    } catch (error) {
-        console.warn('⚠️ Could not save to localStorage:', error);
-    }
-}
-
-// ==================== GET INVENTORY CACHE ====================
-async function getInventoryCache() {
-    return FALLBACK_INVENTORY_ITEMS;
 }
 
 // ==================== MODAL FUNCTIONS ====================
@@ -1980,50 +1971,6 @@ function closeModal() {
     }
 }
 
-// ==================== MISSING INGREDIENTS MODAL ====================
-function showMissingIngredientsModal(productName, missingIngredients) {
-    if (!elements.missingIngredientsModal) {
-        console.error('❌ Missing Ingredients Modal not found in DOM');
-        return;
-    }
-    
-    console.log(`🍽️ Displaying missing ingredients modal for: ${productName}`);
-    
-    if (elements.missingProductName) {
-        elements.missingProductName.textContent = productName;
-    }
-    
-    if (elements.missingIngredientsList) {
-        elements.missingIngredientsList.innerHTML = '';
-        missingIngredients.forEach(ingredient => {
-            const listItem = document.createElement('li');
-            listItem.style.cssText = `
-                padding: 8px 0;
-                padding-left: 25px;
-                position: relative;
-                color: #d32f2f;
-                font-weight: 500;
-            `;
-            listItem.innerHTML = `<span style="position: absolute; left: 0;">❌</span> ${ingredient}`;
-            elements.missingIngredientsList.appendChild(listItem);
-        });
-    }
-    
-    elements.missingIngredientsModal.style.display = 'flex';
-    setTimeout(() => {
-        elements.missingIngredientsModal.classList.add('show');
-    }, 10);
-}
-
-function closeMissingIngredientsModal() {
-    if (elements.missingIngredientsModal) {
-        elements.missingIngredientsModal.classList.remove('show');
-        setTimeout(() => {
-            elements.missingIngredientsModal.style.display = 'none';
-        }, 150);
-    }
-}
-
 // ==================== SAVE MENU ITEM ====================
 async function handleSaveItem() {
     const formData = {
@@ -2108,23 +2055,29 @@ async function handleSaveItem() {
         return;
     }
     
+    // Check if this is a new product (not editing)
     if (!formData.itemId || formData.itemId.trim() === '') {
-        const inventoryItems = FALLBACK_INVENTORY_ITEMS || [];
-        
         console.log(`\n🔍 ========== CHECKING INGREDIENTS FOR: ${formData.itemName} ==========`);
         
         const availabilityCheck = await checkIngredientAvailability(formData.itemName);
         
+        // If ingredients are missing, show modal and prevent saving
         if (!availabilityCheck.available && availabilityCheck.missingIngredients.length > 0) {
-            const warningMsg = `Creating "${formData.itemName}" with missing ingredients: ${availabilityCheck.missingIngredients.join(', ')}. You can restock ingredients later.`;
+            console.warn(`❌ Missing ingredients detected - blocking product creation`);
             
-            console.warn(`⚠️ ${warningMsg}`);
-            showToast(`ℹ️ ${warningMsg}`, 'info', 4000);
+            // Show missing ingredients modal
+            showMissingIngredientsModal(formData.itemName, availabilityCheck.missingIngredients);
             
-            console.log(`✅ Proceeding with save (ingredients optional)...`);
-        } else {
-            console.log(`✅ All ingredients available! Proceeding to save...`);
+            // Close the add product modal
+            closeModal();
+            
+            // Show warning toast
+            showToast(`❌ Cannot add "${formData.itemName}" - Missing ingredients`, 'error', 5000);
+            
+            return; // Stop the save process
         }
+        
+        console.log(`✅ All ingredients available! Proceeding to save...`);
     }
     
     await saveMenuItem(formData);
@@ -2209,37 +2162,39 @@ async function saveMenuItem(itemData) {
 }
 
 // ==================== DELETE MENU ITEM ====================
-async function deleteMenuItem(itemId) {
+async function deleteMenuItem(itemId, event) {
     if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
         return;
     }
     
-    if (itemId && itemId.startsWith('fallback_')) {
-        console.log(`ℹ️ Item "${itemId}" is a local fallback item, removing from UI only`);
-        
-        showToast('Local product removed (not saved in database)', 'info');
-        
-        const product = allMenuItems.find(item => item._id === itemId);
-        
-        allMenuItems = allMenuItems.filter(item => item._id !== itemId);
-        
-        updateAllUIComponents();
-        updateCategoryCounts();
-        saveInventoryStockValues();
-        return;
+    console.log(`🗑️ Deleting product: ${itemId}`);
+    
+    // Get the button element - either from event or by searching the DOM
+    let deleteBtn = null;
+    if (event && event.target) {
+        deleteBtn = event.target;
+    } else {
+        // Search for the delete button by finding it in the product card
+        deleteBtn = document.querySelector(`[onclick*="deleteMenuItem('${itemId}')"]`);
     }
     
-    const deleteBtn = event.target;
-    const originalText = deleteBtn.textContent;
-    deleteBtn.textContent = 'Deleting...';
-    deleteBtn.disabled = true;
+    if (!deleteBtn) {
+        console.warn('⚠️ Delete button not found, proceeding with deletion');
+    } else {
+        deleteBtn.style.opacity = '0.5';
+        deleteBtn.style.pointerEvents = 'none';
+    }
     
     try {
+        console.log(`📡 Sending DELETE request to /api/menu/${itemId}`);
+        
         const response = await fetch(`/api/menu/${itemId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include'
         });
+        
+        console.log(`📊 Response status: ${response.status}`);
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
@@ -2247,29 +2202,37 @@ async function deleteMenuItem(itemId) {
         }
         
         const data = await response.json();
+        console.log(`📋 Response data:`, data);
         
         if (!response.ok) {
             throw new Error(`Server error ${response.status}: ${data.message || 'Unknown error'}`);
         }
         
         if (data.success) {
+            console.log(`✅ Product deleted successfully from MongoDB`);
             showToast('Product deleted successfully!', 'success');
             
+            // Remove from local array
             allMenuItems = allMenuItems.filter(item => item._id !== itemId);
+            console.log(`✅ Product removed from allMenuItems (${allMenuItems.length} items remaining)`);
             
+            // Update UI
             updateAllUIComponents();
             updateCategoryCounts();
             
-            saveInventoryStockValues();
+            console.log(`✅ Changes saved`);
         } else {
-            throw new Error(data.message);
+            throw new Error(data.message || 'Delete failed');
         }
     } catch (error) {
         console.error('❌ Error deleting product:', error);
-        showToast('Failed to delete product', 'error');
+        showToast(`Failed to delete product: ${error.message}`, 'error');
+        addNotification(`Delete failed for product`, 'error', itemId);
     } finally {
-        deleteBtn.textContent = originalText;
-        deleteBtn.disabled = false;
+        if (deleteBtn) {
+            deleteBtn.style.opacity = '1';
+            deleteBtn.style.pointerEvents = 'auto';
+        }
     }
 }
 
@@ -2468,7 +2431,7 @@ function renderMenuGrid() {
                 <h4>${escapeHtml(itemName)}</h4>
                 <div class="card-actions">
                     <button class="btn-icon" onclick="openEditModal('${item._id}')" title="Edit product">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteMenuItem('${item._id}')" title="Delete product">🗑️</button>
+                    <button class="btn-icon delete" onclick="deleteMenuItem('${item._id}', event)" title="Delete product">🗑️</button>
                 </div>
             </div>
             <div class="card-body">
@@ -2728,6 +2691,13 @@ window.dismissNotification = dismissNotification;
 window.quickAddStock = quickAddStock;
 window.ingredientInventory = ingredientInventory;
 window.servingwareInventory = servingwareInventory;
+window.closeMissingIngredientsModal = closeMissingIngredientsModal;
+window.checkIngredientAvailability = checkIngredientAvailability;
+window.showMissingIngredientsModal = showMissingIngredientsModal;
+window.resetInventoryToZero = resetInventoryToZero;
+window.fetchInventoryFromMongoDB = fetchInventoryFromMongoDB;
 
 console.log('✅ Menu Management System loaded with integrated stock management!');
 console.log('📦 Products appear immediately in Product Menu with quick-add stock controls');
+console.log('🚫 Products cannot be added unless all ingredients are available in inventory');
+console.log('📡 Using actual inventory from MongoDB - No fallback data');

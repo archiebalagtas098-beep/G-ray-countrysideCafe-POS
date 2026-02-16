@@ -4,18 +4,7 @@ let currentCategory = 'all';
 let selectedPaymentMethod = null;
 let productCatalog = [];
 let staffInventory = [];
-let pendingStockRequests = [];
 let outOfStockItems = [];
-
-// Track active stock requests
-let activeStockRequestModals = new Set();
-let stockRequestTimestamps = {};
-
-// Flag to prevent multiple submissions
-let isSubmittingStockRequest = false;
-
-// ==================== 🔴 ADMIN NOTIFICATION TRACKING ====================
-let outOfStockNotifications = new Set();
 
 // ==================== 🔴 EVENT SOURCE FOR REAL-TIME UPDATES ====================
 let stockEventSource = null;
@@ -761,15 +750,11 @@ function handleLogout() {
     try {
         // Clear all local state variables
         currentOrder = [];
-        pendingStockRequests = [];
         currentServingwareInventory = {};
         
         // Clear all localStorage items related to offline sync
         const itemsToClear = [
-            'pendingStockRequests',
-            'localStockRequests',
             'servingwareInventory',
-            'stockRequestTimestamps',
             'offlineMode',
             'lastSyncTime'
         ];
@@ -965,7 +950,8 @@ function createProductCard(product) {
         if (product.stock > 0) {
             addItemToOrder(product.name, product.price, product);
         } else {
-            showRequestStockModal(product);
+            // Just show a simple toast that item is out of stock
+            showToast(`❌ ${product.name} is currently out of stock`, 'error', 3000);
         }
     };
     
@@ -974,10 +960,6 @@ function createProductCard(product) {
         : `🚫 OUT OF STOCK`;
     
     const stockColor = product.stock > 0 ? '#28a745' : '#dc3545';
-    
-    // Check if there's a pending request for this product
-    const hasPendingRequest = pendingStockRequests.includes(product.name);
-    const pendingIndicator = hasPendingRequest ? '<span style="color: #ff9800; font-size: 12px; display: block;">⏳ Request Pending</span>' : '';
     
     card.innerHTML = `
         <img src="/images/${product.image}" 
@@ -989,7 +971,6 @@ function createProductCard(product) {
         <div class="compact-product-price">₱${product.price}</div>
         <div class="compact-product-stock" style="color: ${stockColor}; font-weight: bold;">
             ${stockStatus}
-            ${pendingIndicator}
         </div>
     `;
     
@@ -1003,8 +984,7 @@ function addItemToOrder(name, price, product = null) {
     }
     
     if (!product || product.stock <= 0) {
-        alert(`❌ ${name} is out of stock`);
-        if (product) showRequestStockModal(product);
+        showToast(`❌ ${name} is out of stock`, 'error', 3000);
         return;
     }
     
@@ -1174,647 +1154,6 @@ function Payment() {
     }
 }
 
-// ==================== 📦 STOCK REQUEST FUNCTIONS ====================
-
-/**
- * Main entry point for stock requests
- */
-function requestStock(productIdentifier) {
-    console.log('🛒 ========== REQUEST STOCK CALLED ==========');
-    console.log('📦 Product Identifier:', productIdentifier);
-    console.log('📦 Catalog size:', productCatalog.length);
-    
-    // Prevent multiple modals
-    if (document.getElementById('stockRequestModal')) {
-        console.log('⚠️ Modal already open');
-        showToast('Stock request modal already open', 'warning');
-        return;
-    }
-    
-    // If catalog is empty, load menu first
-    if (productCatalog.length === 0) {
-        console.log('📋 Catalog is empty, loading menu items...');
-        showToast('Loading menu items...', 'info');
-        
-        loadAllMenuItems().then(() => {
-            console.log(`✅ Menu loaded, searching for product... Catalog now has ${productCatalog.length} products`);
-            
-            // Final safety check: if still empty after loading, use local database
-            if (productCatalog.length === 0) {
-                console.warn('⚠️ Catalog still empty after API load, using local database...');
-                loadFromLocalMenuDatabase();
-            }
-            
-            setTimeout(() => {
-                const product = findProductInCatalog(productIdentifier);
-                
-                if (product) {
-                    console.log('✅ Product found after loading:', product.name);
-                    showRequestStockModal(ensureProductFields(product));
-                } else {
-                    console.warn('⚠️ Product not found even after loading catalog');
-                    showToast(`Product "${productIdentifier}" not found in menu`, 'error');
-                }
-            }, 500);
-        }).catch(error => {
-            console.error('❌ Error loading menu:', error);
-            console.log('💾 Falling back to local database...');
-            loadFromLocalMenuDatabase();
-            
-            // Try again with local database
-            setTimeout(() => {
-                const product = findProductInCatalog(productIdentifier);
-                if (product) {
-                    console.log('✅ Product found in local database:', product.name);
-                    showRequestStockModal(ensureProductFields(product));
-                } else {
-                    showToast(`Product "${productIdentifier}" not found`, 'error');
-                }
-            }, 300);
-        });
-        return;
-    }
-    
-    // Search in existing catalog
-    console.log('🔍 Searching in existing catalog...');
-    const product = findProductInCatalog(productIdentifier);
-    
-    if (!product) {
-        console.error('❌ Product not found:', productIdentifier);
-        showToast(`Product "${productIdentifier}" not found`, 'error');
-        return;
-    }
-    
-    console.log('✅ Product found, opening modal:', product.name);
-    showRequestStockModal(ensureProductFields(product));
-}
-
-/**
- * Find product in catalog with enhanced search
- */
-function findProductInCatalog(identifier) {
-    if (!identifier) return null;
-    
-    const idStr = String(identifier).trim();
-    
-    console.log('🔍 Searching for product:', idStr);
-    console.log('📦 Total products in catalog:', productCatalog.length);
-    
-    // If catalog is empty, log context and return null
-    if (productCatalog.length === 0) {
-        console.warn('⚠️ Product catalog is empty!');
-        console.warn('📊 Catalog state:', {
-            length: productCatalog.length,
-            isArray: Array.isArray(productCatalog),
-            identifier: idStr,
-            timestamp: new Date().toISOString()
-        });
-        return null;
-    }
-    
-    // Try exact ID match first
-    let product = productCatalog.find(p => p._id === idStr);
-    if (product) {
-        console.log('✅ Found by exact ID:', product.name);
-        return product;
-    }
-    
-    // Try exact name match
-    product = productCatalog.find(p => p.name === idStr);
-    if (product) {
-        console.log('✅ Found by exact name:', product.name);
-        return product;
-    }
-    
-    // Try case-insensitive name match
-    product = productCatalog.find(p => p.name && p.name.toLowerCase() === idStr.toLowerCase());
-    if (product) {
-        console.log('✅ Found by case-insensitive name:', product.name);
-        return product;
-    }
-    
-    // Try partial match (for keywords)
-    product = productCatalog.find(p => p.name && p.name.toLowerCase().includes(idStr.toLowerCase()));
-    if (product) {
-        console.log('✅ Found by partial match:', product.name);
-        return product;
-    }
-    
-    // Log all available products for debugging
-    console.warn('❌ Product not found! Available products:');
-    productCatalog.forEach(p => {
-        console.log(`  - ${p.name} (ID: ${p._id})`);
-    });
-    
-    return null;
-}
-
-/**
- * Create fallback product
- */
-function createFallbackProduct(identifier) {
-    const idStr = String(identifier);
-    
-    // Default values
-    let name = idStr;
-    let category = 'Rice Bowl Meals';
-    let price = 180;
-    let unit = 'plate';
-    
-    // Check for Korean Spicy Bulgogi
-    if (idStr.toLowerCase().includes('bulgogi') || 
-        idStr.toLowerCase().includes('korean') ||
-        idStr.includes('180')) {
-        name = 'Korean Spicy Bulgogi (Pork)';
-    }
-    
-    return {
-        _id: `fallback_${Date.now()}`,
-        name: name,
-        category: category,
-        price: price,
-        stock: 0,
-        unit: unit,
-        maxStock: MAX_STOCK_PER_ITEM,
-        image: getProductImage(name)
-    };
-}
-
-/**
- * Ensure product has all fields
- */
-function ensureProductFields(product) {
-    return {
-        ...product,
-        name: product.name || 'Unknown Product',
-        category: product.category || 'Uncategorized',
-        price: product.price || 0,
-        stock: product.stock || 0,
-        unit: product.unit || 'unit',
-        maxStock: product.maxStock || MAX_STOCK_PER_ITEM,
-        _id: product._id || product.id || `temp_${Date.now()}`,
-        image: product.image || getProductImage(product.name)
-    };
-}
-
-/**
- * Show stock request modal
- */
-function showRequestStockModal(product) {
-    if (!product) {
-        showToast('Product information missing', 'error');
-        return;
-    }
-    
-    // Remove any existing modal
-    const existingModal = document.getElementById('stockRequestModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    activeStockRequestModals.add(product.name);
-    
-    const maxRequestable = (product.maxStock || MAX_STOCK_PER_ITEM) - (product.stock || 0);
-    const defaultQty = Math.min(10, maxRequestable);
-    const hasPendingRequest = pendingStockRequests.includes(product.name);
-    
-    const modalHTML = `
-        <div id="stockRequestModal" data-product-name="${product.name}" style="
-            display: flex;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-        ">
-            <div style="
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                max-width: 500px;
-                width: 90%;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            ">
-                <h2 style="margin: 0 0 20px 0; color: #333;">Request Stock</h2>
-                
-                <p style="margin: 10px 0;"><strong>Product:</strong> ${product.name}</p>
-                <p style="margin: 10px 0;"><strong>Category:</strong> ${product.category}</p>
-                <p style="margin: 10px 0;"><strong>Price:</strong> ₱${product.price}</p>
-                <p style="margin: 10px 0; color: ${product.stock > 0 ? '#28a745' : '#dc3545'};">
-                    <strong>Current Stock:</strong> ${product.stock || 0}/${product.maxStock || MAX_STOCK_PER_ITEM} ${product.unit || ''}
-                </p>
-                <p style="margin: 10px 0; color: #ff9800;">
-                    <strong>Available Capacity:</strong> ${maxRequestable} ${product.unit || ''}
-                </p>
-                
-                ${hasPendingRequest ? `
-                    <p style="margin: 10px 0; color: #ff9800; font-weight: bold;">
-                        ⏳ A request for this product is already pending
-                    </p>
-                ` : ''}
-                
-                <div style="margin: 20px 0;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">
-                        Quantity Requested:
-                    </label>
-                    <input type="number" 
-                           id="requestQty" 
-                           min="1" 
-                           max="${maxRequestable}" 
-                           value="${defaultQty}" 
-                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
-                </div>
-                
-                <div style="margin: 20px 0;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">
-                        Priority Level:
-                    </label>
-                    <select id="requestPriority" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
-                    <button onclick="closeStockRequestModal()" style="
-                        padding: 10px 20px;
-                        border: 1px solid #ddd;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        background: #f0f0f0;
-                        color: #333;
-                        font-size: 14px;
-                    ">Cancel</button>
-                    
-                    <button id="submitStockRequestBtn"
-                            style="
-                        padding: 10px 20px;
-                        border: none;
-                        border-radius: 5px;
-                        cursor: ${hasPendingRequest ? 'not-allowed' : 'pointer'};
-                        background: ${hasPendingRequest ? '#6c757d' : '#4CAF50'};
-                        color: white;
-                        font-size: 14px;
-                        font-weight: bold;
-                    " ${hasPendingRequest ? 'disabled' : ''}>${hasPendingRequest ? 'Request Pending' : 'Request Stock'}</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Add click outside to close
-    const modal = document.getElementById('stockRequestModal');
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeStockRequestModal();
-    });
-    
-    // Add submit button click handler
-    const submitBtn = document.getElementById('submitStockRequestBtn');
-    if (submitBtn && !hasPendingRequest) {
-        submitBtn.addEventListener('click', () => {
-            submitStockRequest(product._id, product.name, product.unit);
-        });
-    }
-}
-
-/**
- * Close stock request modal
- */
-function closeStockRequestModal() {
-    const modal = document.getElementById('stockRequestModal');
-    if (modal) {
-        const productName = modal.dataset.productName;
-        if (productName) {
-            activeStockRequestModals.delete(productName);
-        }
-        modal.remove();
-    }
-}
-
-/**
- * Submit stock request - ONLY ONCE
- */
-async function submitStockRequest(productId, productName, unit) {
-    console.log('📤 ========== SUBMIT STOCK REQUEST ==========');
-    console.log('📦 Product ID:', productId);
-    console.log('📦 Product Name:', productName);
-    console.log('📦 Unit:', unit);
-    
-    // Prevent multiple submissions
-    if (isSubmittingStockRequest) {
-        console.log('⚠️ Already submitting a request, please wait');
-        showToast('Please wait, processing previous request...', 'warning');
-        return;
-    }
-    
-    const submitBtn = document.getElementById('submitStockRequestBtn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.style.background = '#6c757d';
-        submitBtn.textContent = 'Submitting...';
-    }
-    
-    isSubmittingStockRequest = true;
-    
-    try {
-        // Get quantity and priority
-        const quantityInput = document.getElementById('requestQty');
-        const prioritySelect = document.getElementById('requestPriority');
-        
-        if (!quantityInput || !prioritySelect) {
-            console.error('❌ Input elements not found');
-            showToast('Form elements missing', 'error');
-            isSubmittingStockRequest = false;
-            return;
-        }
-        
-        const quantity = parseInt(quantityInput.value);
-        const priority = prioritySelect.value;
-        
-        console.log('📋 Form values - Quantity:', quantity, 'Type:', typeof quantity, 'Priority:', priority);
-        
-        // Validate quantity - must be a positive number
-        if (isNaN(quantity) || quantity <= 0) {
-            console.warn('⚠️ Invalid quantity:', quantity, 'isNaN:', isNaN(quantity));
-            showToast('Please enter a valid quantity (must be a number greater than 0)', 'error');
-            isSubmittingStockRequest = false;
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.style.background = '#4CAF50';
-                submitBtn.textContent = 'Request Stock';
-            }
-            return;
-        }
-        
-        // Find product in catalog
-        let product = productCatalog.find(p => p.name === productName);
-        if (!product) {
-            product = productCatalog.find(p => p._id === productId);
-        }
-        
-        if (!product) {
-            console.error('❌ Product not found in catalog:', productName, productId);
-            showToast('Product not found', 'error');
-            closeStockRequestModal();
-            isSubmittingStockRequest = false;
-            return;
-        }
-        
-        console.log('✅ Product found:', product.name);
-        
-        // Check if already pending
-        if (pendingStockRequests.includes(productName)) {
-            console.warn('⚠️ Request already pending for:', productName);
-            showToast('A request for this product is already pending', 'warning');
-            closeStockRequestModal();
-            isSubmittingStockRequest = false;
-            return;
-        }
-        
-        // Validate quantity against max
-        const maxRequestable = (product.maxStock || MAX_STOCK_PER_ITEM) - (product.stock || 0);
-        if (quantity > maxRequestable) {
-            console.warn('⚠️ Quantity exceeds max:', quantity, '>', maxRequestable);
-            showToast(`Maximum requestable quantity is ${maxRequestable}`, 'error');
-            isSubmittingStockRequest = false;
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.style.background = '#4CAF50';
-                submitBtn.textContent = 'Request Stock';
-            }
-            return;
-        }
-        
-        console.log('📋 All validation passed, preparing request...');
-        
-        // Close modal immediately to prevent double-click
-        closeStockRequestModal();
-        
-        // Show processing toast
-        const toast = showToast('⏳ Submitting stock request...', 'info', 0);
-        
-        // Prepare request data - REQUIRED FIELDS: productName, requestedQuantity
-        const requestData = {
-            productName: productName,
-            requestedQuantity: quantity,
-            unit: unit,
-            priority: priority,
-            requestedBy: 'staff',  // Add requester info
-            timestamp: new Date().toISOString()
-        };
-        
-        // Verify data before sending
-        console.log('� Verification before sending:');
-        console.log('  productName:', productName, 'type:', typeof productName, 'empty?', !productName);
-        console.log('  requestedQuantity:', quantity, 'type:', typeof quantity, 'isNaN?', isNaN(quantity));
-        console.log('  unit:', unit);
-        console.log('  priority:', priority);
-        console.log('📡 Full request data:', requestData);
-        
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/stock-requests`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify(requestData)
-            });
-            
-            console.log('📡 Response status:', response.status);
-            
-            // Remove processing toast
-            if (toast && toast.parentElement) {
-                toast.remove();
-            }
-            
-            const responseText = await response.text();
-            console.log('📡 Response body:', responseText);
-            
-            let responseData = {};
-            try {
-                responseData = JSON.parse(responseText);
-            } catch (e) {
-                console.log('Response is not JSON');
-                responseData = { message: responseText || 'Success' };
-            }
-            
-            if (response.ok) {
-                // ✅ SUCCESS - Server accepted the request and saved to MongoDB
-                console.log('✅ Stock request SUCCESSFUL! Saved to MongoDB Atlas');
-                
-                // Add to pending requests (memory only - no localStorage)
-                if (!pendingStockRequests.includes(productName)) {
-                    pendingStockRequests.push(productName);
-                    console.log('✅ Added to pending requests list');
-                }
-                
-                // Show success message
-                showToast(`✅ Stock request for ${productName} sent to admin!`, 'success');
-                console.log('📢 Success toast shown');
-                
-                // Show success modal
-                showSuccessModal(productName, quantity, unit, false);
-                console.log('📢 Success modal shown');
-                
-            } else if (response.status === 409) {
-                // Already pending on server
-                console.warn('⚠️ Request already pending on server (409)');
-                showToast(`⚠️ A request for ${productName} is already pending`, 'warning');
-                
-            } else {
-                // Server error - show detailed error message
-                console.error('❌ Server error:', response.status, responseData);
-                
-                // Build detailed error message
-                let errorMsg = responseData.message || 'Server error';
-                if (responseData.validationErrors && Array.isArray(responseData.validationErrors)) {
-                    const fieldErrors = responseData.validationErrors.map(e => `${e.field}: ${e.message}`).join(', ');
-                    errorMsg = `Validation error: ${fieldErrors}`;
-                } else if (responseData.details) {
-                    errorMsg = `${errorMsg} - ${responseData.details}`;
-                }
-                
-                console.error('📋 Full response:', responseData);
-                showToast(`❌ Failed: ${errorMsg}`, 'error');
-            }
-            
-        } catch (error) {
-            console.error('❌ Network error:', error.message);
-            
-            // Remove processing toast
-            const processingToast = document.getElementById('activeToast');
-            if (processingToast && processingToast.parentElement) {
-                processingToast.remove();
-            }
-            
-            // Network error - show error message
-            showToast('❌ Network error - request failed', 'error');
-        }
-        
-    } catch (error) {
-        console.error('❌ Unexpected error in submitStockRequest:', error);
-        showToast('❌ An error occurred: ' + error.message, 'error');
-    } finally {
-        // Reset submission flag
-        isSubmittingStockRequest = false;
-        console.log('✅ Request submission completed');
-    }
-}
-
-/**
- * Show success modal
- */
-function showSuccessModal(productName, quantity, unit, localOnly = false) {
-    console.log('📢 Showing success modal:', { productName, quantity, unit, localOnly });
-    
-    // Remove any existing success modal
-    const existingModal = document.getElementById('successModal');
-    if (existingModal) {
-        console.log('🗑️ Removing existing success modal');
-        existingModal.remove();
-    }
-    
-    const successHTML = `
-        <div id="successModal" style="
-            display: flex;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 10001;
-            align-items: center;
-            justify-content: center;
-        ">
-            <div style="
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                max-width: 500px;
-                width: 90%;
-                text-align: center;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                animation: slideDown 0.3s ease-in-out;
-            ">
-                <div style="
-                    width: 80px;
-                    height: 80px;
-                    background: #4CAF50;
-                    border-radius: 50%;
-                    margin: 0 auto 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
-                    <span style="font-size: 40px;">
-                        ✅
-                    </span>
-                </div>
-                
-                <h2 style="color: #4CAF50; margin: 0 0 15px 0; font-size: 24px;">
-                    Request Submitted!
-                </h2>
-                
-                <p style="color: #666; font-size: 16px; margin: 15px 0; font-weight: 600;">
-                    ${quantity} ${unit} of <strong style="color: #333;">${productName}</strong>
-                </p>
-                
-                <p style="color: #888; font-size: 14px; margin: 15px 0; line-height: 1.6;">
-                    Your stock request has been successfully saved to the database. The admin will review it shortly.
-                </p>
-                
-                <button onclick="closeSuccessModal()" style="
-                    padding: 12px 40px;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    background: #4CAF50;
-                    color: white;
-                    font-size: 16px;
-                    font-weight: bold;
-                    margin-top: 20px;
-                    transition: all 0.3s ease;
-                "
-                onmouseover="this.style.opacity='0.9'"
-                onmouseout="this.style.opacity='1'"
-                >OK</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', successHTML);
-    console.log('✅ Success modal inserted into DOM');
-}
-
-/**
- * Close success modal
- */
-function closeSuccessModal() {
-    console.log('🔚 Closing success modal...');
-    const modal = document.getElementById('successModal');
-    if (modal) {
-        modal.remove();
-        console.log('✅ Success modal removed');
-    }
-    
-    // Also ensure any other modals are cleaned up
-    const stockRequestModal = document.getElementById('stockRequestModal');
-    if (stockRequestModal) {
-        stockRequestModal.remove();
-        console.log('🗑️ Cleaned up leftover stock request modal');
-    }
-}
-
 // ==================== 📋 CATEGORY FUNCTIONS ====================
 function filterCategory(category) {
     currentCategory = category;
@@ -1898,8 +1237,6 @@ function loadInventoryFromStorage() {
 }
 
 // ==================== � REAL-TIME STOCK UPDATES ====================
-
-// ==================== CONNECT TO REAL-TIME STOCK UPDATES ====================
 function connectToStockUpdates() {
     try {
         // Close existing connection
@@ -1918,9 +1255,6 @@ function connectToStockUpdates() {
                 // Handle different event types
                 if (data.type === 'stock_fulfilled') {
                     handleStockFulfilled(data);
-                } else if (data.type === 'stock_request') {
-                    // Admin acknowledges request
-                    handleStockRequestAcknowledgement(data);
                 } else if (data.type === 'inventory_update') {
                     // Raw ingredient stock changed
                     handleInventoryUpdate(data);
@@ -1977,13 +1311,6 @@ function handleStockFulfilled(data) {
             }
         }
         
-        // Remove from pending requests list since it's been fulfilled
-        const pendingIndex = pendingStockRequests.indexOf(productName);
-        if (pendingIndex > -1) {
-            pendingStockRequests.splice(pendingIndex, 1);
-            console.log(`✅ Removed ${productName} from pending requests`);
-        }
-        
         // Re-render the menu to show updated availability
         console.log('🎨 Re-rendering menu with updated stock...');
         renderMenu();
@@ -2002,18 +1329,6 @@ function handleStockFulfilled(data) {
         console.log('✅ Stock fulfilled notification processed');
     } else {
         console.warn(`⚠️ Product ${productName} not found in catalog`);
-    }
-}
-
-// ==================== HANDLE STOCK REQUEST ACKNOWLEDGEMENT ====================
-function handleStockRequestAcknowledgement(data) {
-    const { productName, status, message } = data;
-    console.log(`📬 Stock request acknowledged: ${productName} - ${status}`);
-    
-    if (status === 'pending') {
-        showToast(`📬 Admin received your request for ${productName}`, 'info', 3000);
-    } else if (status === 'processing') {
-        showToast(`⏳ Admin is processing your request for ${productName}`, 'info', 3000);
     }
 }
 
@@ -2107,19 +1422,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 setInterval(saveInventoryToStorage, 30000);
 
 // ==================== 🎯 EXPORT GLOBAL FUNCTIONS ====================
-window.requestStock = requestStock;
 window.setDineIn = setDineIn;
 window.setTakeout = setTakeout;
 window.selectPaymentMethod = selectPaymentMethod;
 window.Payment = Payment;
 window.clearCurrentOrder = clearCurrentOrder;
 window.removeItemFromOrder = removeItemFromOrder;
-window.closeStockRequestModal = closeStockRequestModal;
-window.closeSuccessModal = closeSuccessModal;
-window.showRequestStockModal = showRequestStockModal;
-window.submitStockRequest = submitStockRequest;
 window.filterCategory = filterCategory;
 window.searchFood = searchFood;
-window.handleLogout = handleLogout;  // ✅ Export logout function for onclick
+window.handleLogout = handleLogout;
 window.productCatalog = productCatalog;
-window.pendingStockRequests = pendingStockRequests;
